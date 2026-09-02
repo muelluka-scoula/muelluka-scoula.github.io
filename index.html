@@ -157,6 +157,40 @@
   .cell.wrong { background: #f8d7da; border-color: #dc3545; }
   .cell.empty { background: #f1f1f1; }
 
+  /* --- Brüche: Aufgabe übereinander mit Bruchstrich --- */
+  .cell.frac-cell { min-height: 76px; }
+  .frac {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    vertical-align: middle;
+    margin: 0 3px;
+    line-height: 1.15;
+  }
+  .frac-num, .frac-den { padding: 0 3px; }
+  .frac-bar { width: 100%; height: 0; border-top: 1.5px solid #333; margin: 1px 0; }
+  .task .op { margin: 0 4px; color: #555; }
+
+  /* --- Brüche: Eingabe als Zähler/Nenner übereinander --- */
+  .frac-input {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    margin-left: 4px;
+  }
+  .frac-input input {
+    width: 46px;
+    font-family: inherit;
+    font-size: 14px;
+    padding: 3px 4px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    text-align: center;
+    margin: 1px 0;
+  }
+  .frac-input input:disabled { background: #f0f0f0; color: #333; }
+  .frac-input .frac-bar { width: 46px; height: 0; border-top: 1.5px solid #333; margin: 2px 0; }
+
   .locked-note {
     display: none;
     background: #fff3cd;
@@ -523,15 +557,9 @@ function generateNumericProblems(cfg) {
   return list;
 }
 
-// Prüft eine als Text eingegebene Antwort "a/b" gegen den mathematisch exakten
-// Bruch trueNum/trueDen — akzeptiert jede wertgleiche Schreibweise (gekürzt oder nicht).
-function checkFractionAnswer(val, trueNum, trueDen) {
-  const parts = val.split('/');
-  if (parts.length !== 2) return false;
-  const un = parseInt(parts[0].trim(), 10);
-  const ud = parseInt(parts[1].trim(), 10);
-  if (isNaN(un) || isNaN(ud) || ud === 0) return false;
-  return un * trueDen === trueNum * ud;
+// Baut die HTML-Darstellung eines Bruchs übereinander mit Bruchstrich, z. B. 7 über 12.
+function fracHTML(numStr, denStr) {
+  return `<span class="frac"><span class="frac-num">${numStr}</span><span class="frac-bar"></span><span class="frac-den">${denStr}</span></span>`;
 }
 
 function generateFracAddProblems(cfg) {
@@ -544,10 +572,12 @@ function generateFracAddProblems(cfg) {
     const trueNum = a * d + c * b;
     const trueDen = b * d;
     list.push({
-      taskText: `${a}/${b}  +  ${c}/${d}  =`,
-      inputType: 'text',
-      placeholder: 'z. B. 7/12',
-      checkFn: (val) => checkFractionAnswer(val, trueNum, trueDen)
+      inputMode: 'fraction',
+      taskHTML: `${fracHTML(a, b)}<span class="op">+</span>${fracHTML(c, d)}<span class="op">=</span>`,
+      checkFn: (numVal, denVal) => {
+        if (isNaN(numVal) || isNaN(denVal) || denVal === 0) return false;
+        return numVal * trueDen === trueNum * denVal;
+      }
     });
   }
   return list;
@@ -586,10 +616,12 @@ function generateFracMulProblems(cfg) {
     const trueDen = n1v * n2v;
 
     list.push({
-      taskText: `${termStr(N1)}/${termStr(D1)}   ·   ${termStr(N2)}/${termStr(D2)}  =`,
-      inputType: 'text',
-      placeholder: 'z. B. 5/6',
-      checkFn: (val) => checkFractionAnswer(val, trueNum, trueDen)
+      inputMode: 'fraction',
+      taskHTML: `${fracHTML(termStr(N1), termStr(D1))}<span class="op">·</span>${fracHTML(termStr(N2), termStr(D2))}<span class="op">=</span>`,
+      checkFn: (numVal, denVal) => {
+        if (isNaN(numVal) || isNaN(denVal) || denVal === 0) return false;
+        return numVal * trueDen === trueNum * denVal;
+      }
     });
   }
   return list;
@@ -607,15 +639,25 @@ function renderProblems() {
   grid.innerHTML = '';
   problems.forEach((p, idx) => {
     const cell = document.createElement('div');
-    cell.className = 'cell';
+    cell.className = 'cell' + (p.inputMode === 'fraction' ? ' frac-cell' : '');
     cell.id = 'cell-' + idx;
-    const type = p.inputType === 'text' ? 'text' : 'number';
-    const placeholder = p.placeholder ? ` placeholder="${p.placeholder}"` : '';
-    cell.innerHTML = `
-      <span class="nr">${idx + 1}.</span>
-      <span class="task">${p.taskText}</span>
-      <input type="${type}" id="input-${idx}" disabled${placeholder}>
-    `;
+    if (p.inputMode === 'fraction') {
+      cell.innerHTML = `
+        <span class="nr">${idx + 1}.</span>
+        <span class="task">${p.taskHTML}</span>
+        <span class="frac-input">
+          <input type="number" id="input-${idx}-num" disabled>
+          <span class="frac-bar"></span>
+          <input type="number" id="input-${idx}-den" disabled>
+        </span>
+      `;
+    } else {
+      cell.innerHTML = `
+        <span class="nr">${idx + 1}.</span>
+        <span class="task">${p.taskText}</span>
+        <input type="number" id="input-${idx}" disabled>
+      `;
+    }
     grid.appendChild(cell);
   });
 }
@@ -658,9 +700,15 @@ function startTimer() {
   startBtn.disabled = true;
   startBtn.textContent = 'Läuft…';
   problems.forEach((p, idx) => {
-    document.getElementById('input-' + idx).disabled = false;
+    if (p.inputMode === 'fraction') {
+      document.getElementById('input-' + idx + '-num').disabled = false;
+      document.getElementById('input-' + idx + '-den').disabled = false;
+    } else {
+      document.getElementById('input-' + idx).disabled = false;
+    }
   });
-  document.getElementById('input-0').focus();
+  const firstField = problems[0].inputMode === 'fraction' ? 'input-0-num' : 'input-0';
+  document.getElementById(firstField).focus();
 
   timerInterval = setInterval(() => {
     remaining--;
@@ -680,23 +728,41 @@ function finishAndGrade() {
   const cfg = EXERCISES[currentExerciseKey];
   let correctCount = 0;
   problems.forEach((p, idx) => {
-    const input = document.getElementById('input-' + idx);
     const cell = document.getElementById('cell-' + idx);
-    input.disabled = true;
-    const val = input.value.trim();
-    if (val === '') {
-      cell.classList.add('empty');
-    } else if (p.checkFn(val)) {
-      cell.classList.add('correct');
-      correctCount++;
+    if (p.inputMode === 'fraction') {
+      const numInput = document.getElementById('input-' + idx + '-num');
+      const denInput = document.getElementById('input-' + idx + '-den');
+      numInput.disabled = true;
+      denInput.disabled = true;
+      const numStr = numInput.value.trim();
+      const denStr = denInput.value.trim();
+      if (numStr === '' && denStr === '') {
+        cell.classList.add('empty');
+      } else if (p.checkFn(parseInt(numStr, 10), parseInt(denStr, 10))) {
+        cell.classList.add('correct');
+        correctCount++;
+      } else {
+        cell.classList.add('wrong');
+      }
     } else {
-      cell.classList.add('wrong');
+      const input = document.getElementById('input-' + idx);
+      input.disabled = true;
+      const val = input.value.trim();
+      if (val === '') {
+        cell.classList.add('empty');
+      } else if (p.checkFn(val)) {
+        cell.classList.add('correct');
+        correctCount++;
+      } else {
+        cell.classList.add('wrong');
+      }
     }
   });
   scoreValue.textContent = correctCount + '/' + cfg.count;
   lockedNote.style.display = 'block';
   startBtn.textContent = 'Fertig';
   timerValue.textContent = '00:00';
+
 
   saveResult(currentExerciseKey, correctCount, cfg.count);
 }
