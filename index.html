@@ -242,7 +242,7 @@
       </div>
       <div class="bar-item">
         <div class="bar-label">Punkte</div>
-        <div class="bar-value" id="scoreValue">–/80</div>
+        <div class="bar-value" id="scoreValue">–/–</div>
       </div>
       <div>
         <button class="btn-primary" id="startBtn">Start</button>
@@ -309,32 +309,63 @@
    ========================================================= */
 const EXERCISES = {
   k10000: {
+    type: 'numeric',
     title: "Rechnen bis 10'000",
     sub: "80 Aufgaben · Addition & Subtraktion · alle Ergebnisse positiv",
+    count: 80,
     cap: 10000,
     addAMin: 25, addAMax: 8900, addBMin: 25,
     subAMin: 100, subAMax: 10000, subBMin: 25
   },
   k20000: {
+    type: 'numeric',
     title: "Rechnen bis 20'000",
     sub: "80 Aufgaben · Addition & Subtraktion · alle Ergebnisse positiv",
+    count: 80,
     cap: 20000,
     addAMin: 50, addAMax: 17800, addBMin: 50,
     subAMin: 200, subAMax: 20000, subBMin: 50
   },
   k100000: {
+    type: 'numeric',
     title: "Rechnen bis 100'000",
     sub: "80 Aufgaben · Addition & Subtraktion · alle Ergebnisse positiv",
+    count: 80,
     cap: 100000,
     addAMin: 100, addAMax: 89000, addBMin: 100,
     subAMin: 1000, subAMax: 100000, subBMin: 100
   },
   k2000: {
+    type: 'numeric',
     title: "Rechnen bis 2'000",
     sub: "80 Aufgaben · Addition & Subtraktion · Zahlen zwischen 100 und 2'000",
+    count: 80,
     cap: 2000,
     addAMin: 100, addAMax: 1780, addBMin: 100,
     subAMin: 200, subAMax: 2000, subBMin: 100
+  },
+  k600: {
+    type: 'numeric',
+    title: "Rechnen bis 600",
+    sub: "80 Aufgaben · Addition & Subtraktion · alle Ergebnisse positiv",
+    count: 80,
+    cap: 600,
+    addAMin: 30, addAMax: 534, addBMin: 30,
+    subAMin: 60, subAMax: 600, subBMin: 30
+  },
+  fracAdd: {
+    type: 'fracAdd',
+    title: "Brüche Addition",
+    sub: "20 Aufgaben · Zähler & Nenner je max. 20 · Antwort als Bruch (z. B. 7/12)",
+    count: 20,
+    maxNum: 20,
+    maxDen: 20
+  },
+  fracMulCross: {
+    type: 'fracMulCross',
+    title: "Brüche Multiplikation (Kreuz kürzen)",
+    sub: "16 Aufgaben · teils mit Variablen · vorher übers Kreuz kürzen, dann multiplizieren",
+    count: 16
   }
 };
 const DURATION_SECONDS = 10 * 60;
@@ -462,17 +493,109 @@ function randInt(min, max) {
 }
 
 function generateProblems(cfg) {
+  if (cfg.type === 'fracAdd') return generateFracAddProblems(cfg);
+  if (cfg.type === 'fracMulCross') return generateFracMulProblems(cfg);
+  return generateNumericProblems(cfg);
+}
+
+function generateNumericProblems(cfg) {
   const list = [];
-  for (let i = 0; i < 40; i++) {
+  const half = cfg.count / 2;
+  for (let i = 0; i < half; i++) {
     const a = randInt(cfg.addAMin, cfg.addAMax);
     const b = randInt(cfg.addBMin, cfg.cap - a);
-    list.push({ a, op: '+', b, result: a + b });
+    list.push({
+      taskText: `${a} + ${b} =`,
+      inputType: 'number',
+      checkFn: (val) => parseInt(val, 10) === a + b
+    });
   }
-  for (let i = 0; i < 40; i++) {
+  for (let i = 0; i < half; i++) {
     const a = randInt(cfg.subAMin, cfg.subAMax);
     const b = randInt(cfg.subBMin, a - 1);
-    list.push({ a, op: '-', b, result: a - b });
+    list.push({
+      taskText: `${a} - ${b} =`,
+      inputType: 'number',
+      checkFn: (val) => parseInt(val, 10) === a - b
+    });
   }
+  shuffle(list);
+  return list;
+}
+
+// Prüft eine als Text eingegebene Antwort "a/b" gegen den mathematisch exakten
+// Bruch trueNum/trueDen — akzeptiert jede wertgleiche Schreibweise (gekürzt oder nicht).
+function checkFractionAnswer(val, trueNum, trueDen) {
+  const parts = val.split('/');
+  if (parts.length !== 2) return false;
+  const un = parseInt(parts[0].trim(), 10);
+  const ud = parseInt(parts[1].trim(), 10);
+  if (isNaN(un) || isNaN(ud) || ud === 0) return false;
+  return un * trueDen === trueNum * ud;
+}
+
+function generateFracAddProblems(cfg) {
+  const list = [];
+  for (let i = 0; i < cfg.count; i++) {
+    const a = randInt(1, cfg.maxNum);
+    const b = randInt(2, cfg.maxDen);
+    const c = randInt(1, cfg.maxNum);
+    const d = randInt(2, cfg.maxDen);
+    const trueNum = a * d + c * b;
+    const trueDen = b * d;
+    list.push({
+      taskText: `${a}/${b}  +  ${c}/${d}  =`,
+      inputType: 'text',
+      placeholder: 'z. B. 7/12',
+      checkFn: (val) => checkFractionAnswer(val, trueNum, trueDen)
+    });
+  }
+  return list;
+}
+
+// Baut die Textdarstellung eines Terms wie "6x" / "14" / "y" aus Koeffizient + Variable(n)
+function termStr(t) {
+  if (t.vars.length === 0) return String(t.coef);
+  if (t.coef === 1) return t.vars.join('');
+  return String(t.coef) + t.vars.join('');
+}
+
+function generateFracMulProblems(cfg) {
+  const varNames = ['x', 'y', 'a', 'b', 'n'];
+  const list = [];
+  for (let i = 0; i < cfg.count; i++) {
+    const useVar1 = Math.random() < 0.65;
+    const useVar2 = Math.random() < 0.65;
+    let var1 = null, var2 = null;
+    if (useVar1) var1 = varNames[randInt(0, varNames.length - 1)];
+    if (useVar2) { do { var2 = varNames[randInt(0, varNames.length - 1)]; } while (var2 === var1); }
+
+    const k1 = randInt(2, 9), k2 = randInt(2, 9);
+    const m1 = randInt(1, 5), n1v = randInt(1, 5);
+    const m2 = randInt(1, 5), n2v = randInt(1, 5);
+
+    // Fraktion A = N1/D1, Fraktion B = N2/D2.
+    // N1 & D2 teilen den Faktor k1 (+ var1) -> übers Kreuz kürzbar.
+    // N2 & D1 teilen den Faktor k2 (+ var2) -> übers Kreuz kürzbar.
+    const N1 = { coef: k1 * m1, vars: var1 ? [var1] : [] };
+    const D1 = { coef: k2 * n2v, vars: var2 ? [var2] : [] };
+    const N2 = { coef: k2 * m2, vars: var2 ? [var2] : [] };
+    const D2 = { coef: k1 * n1v, vars: var1 ? [var1] : [] };
+
+    const trueNum = m1 * m2;
+    const trueDen = n1v * n2v;
+
+    list.push({
+      taskText: `${termStr(N1)}/${termStr(D1)}   ·   ${termStr(N2)}/${termStr(D2)}  =`,
+      inputType: 'text',
+      placeholder: 'z. B. 5/6',
+      checkFn: (val) => checkFractionAnswer(val, trueNum, trueDen)
+    });
+  }
+  return list;
+}
+
+function shuffle(list) {
   for (let i = list.length - 1; i > 0; i--) {
     const j = randInt(0, i);
     [list[i], list[j]] = [list[j], list[i]];
@@ -486,10 +609,12 @@ function renderProblems() {
     const cell = document.createElement('div');
     cell.className = 'cell';
     cell.id = 'cell-' + idx;
+    const type = p.inputType === 'text' ? 'text' : 'number';
+    const placeholder = p.placeholder ? ` placeholder="${p.placeholder}"` : '';
     cell.innerHTML = `
       <span class="nr">${idx + 1}.</span>
-      <span class="task">${p.a} ${p.op} ${p.b} =</span>
-      <input type="number" id="input-${idx}" disabled>
+      <span class="task">${p.taskText}</span>
+      <input type="${type}" id="input-${idx}" disabled${placeholder}>
     `;
     grid.appendChild(cell);
   });
@@ -509,11 +634,12 @@ function resetAll() {
   remaining = DURATION_SECONDS;
   running = false;
   graded = false;
-  problems = generateProblems(EXERCISES[currentExerciseKey]);
+  const cfg = EXERCISES[currentExerciseKey];
+  problems = generateProblems(cfg);
   renderProblems();
   timerValue.textContent = formatTime(remaining);
   timerValue.classList.remove('warn');
-  scoreValue.textContent = '–/80';
+  scoreValue.textContent = '–/' + cfg.count;
   lockedNote.style.display = 'none';
   startBtn.disabled = false;
   startBtn.textContent = 'Start';
@@ -551,6 +677,7 @@ startBtn.addEventListener('click', startTimer);
 function finishAndGrade() {
   if (graded) return;
   graded = true;
+  const cfg = EXERCISES[currentExerciseKey];
   let correctCount = 0;
   problems.forEach((p, idx) => {
     const input = document.getElementById('input-' + idx);
@@ -559,22 +686,22 @@ function finishAndGrade() {
     const val = input.value.trim();
     if (val === '') {
       cell.classList.add('empty');
-    } else if (parseInt(val, 10) === p.result) {
+    } else if (p.checkFn(val)) {
       cell.classList.add('correct');
       correctCount++;
     } else {
       cell.classList.add('wrong');
     }
   });
-  scoreValue.textContent = correctCount + '/80';
+  scoreValue.textContent = correctCount + '/' + cfg.count;
   lockedNote.style.display = 'block';
   startBtn.textContent = 'Fertig';
   timerValue.textContent = '00:00';
 
-  saveResult(currentExerciseKey, correctCount);
+  saveResult(currentExerciseKey, correctCount, cfg.count);
 }
 
-function saveResult(exerciseKey, score) {
+function saveResult(exerciseKey, score, total) {
   const name = getCurrentUser();
   if (!name) return;
   const users = loadUsers();
@@ -583,7 +710,7 @@ function saveResult(exerciseKey, score) {
     exercise: exerciseKey,
     date: new Date().toISOString(),
     score: score,
-    total: 80
+    total: total
   });
   saveUsers(users);
 }
@@ -658,9 +785,14 @@ function renderChart(filter, all, filtered) {
   canvas.style.display = 'block';
   emptyNote.style.display = 'none';
 
-  const colors = { k10000: '#4472C4', k20000: '#28a745', k100000: '#e67e22', k2000: '#9b59b6' };
+  const colors = {
+    k10000: '#4472C4', k20000: '#28a745', k100000: '#e67e22', k2000: '#9b59b6',
+    k600: '#e91e8c', fracAdd: '#17a2b8', fracMulCross: '#8b5e34'
+  };
   // Immer EIN Diagramm: jeder Übungstyp ist ein eigenes, farbiges Punkte-Set.
   // Der Filter oben schränkt nur ein, WELCHE Übungen als Punkte erscheinen.
+  // Da die Übungen unterschiedliche Gesamtpunktzahlen haben (80 / 20 / 16),
+  // wird der Prozentsatz richtig gelöster Aufgaben geplottet, damit alle vergleichbar sind.
   const keysToShow = filter === 'all' ? Object.keys(EXERCISES) : [filter];
   let datasets = [];
   keysToShow.forEach(key => {
@@ -668,7 +800,7 @@ function renderChart(filter, all, filtered) {
     if (rows.length === 0) return;
     datasets.push({
       label: EXERCISES[key].title,
-      data: rows.map(r => ({ x: r.date, y: r.score })),
+      data: rows.map(r => ({ x: r.date, y: Math.round((r.score / r.total) * 1000) / 10, raw: r })),
       borderColor: colors[key] || '#666',
       backgroundColor: colors[key] || '#666',
       showLine: false,
@@ -690,11 +822,21 @@ function renderChart(filter, all, filtered) {
           title: { display: true, text: 'Datum' }
         },
         y: {
-          min: 0, max: 80,
-          title: { display: true, text: 'Anzahl richtig (von 80)' }
+          min: 0, max: 100,
+          title: { display: true, text: 'Richtig gelöst (%)' }
         }
       },
-      plugins: { legend: { display: true, position: 'top' } }
+      plugins: {
+        legend: { display: true, position: 'top' },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const r = ctx.raw.raw;
+              return `${ctx.dataset.label}: ${r.score}/${r.total} (${ctx.parsed.y}%)`;
+            }
+          }
+        }
+      }
     }
   });
 }
