@@ -573,8 +573,11 @@ function generateFracAddProblems(cfg) {
     const trueDen = b * d;
     list.push({
       inputMode: 'fraction',
+      fieldType: 'number',
       taskHTML: `${fracHTML(a, b)}<span class="op">+</span>${fracHTML(c, d)}<span class="op">=</span>`,
-      checkFn: (numVal, denVal) => {
+      checkFn: (numStr, denStr) => {
+        const numVal = parseInt(numStr, 10);
+        const denVal = parseInt(denStr, 10);
         if (isNaN(numVal) || isNaN(denVal) || denVal === 0) return false;
         return numVal * trueDen === trueNum * denVal;
       }
@@ -590,37 +593,87 @@ function termStr(t) {
   return String(t.coef) + t.vars.join('');
 }
 
+// Zerlegt eine getippte Antwort wie "6x", "x" oder "14" in { coef, vars }.
+// Gibt null zurück, wenn der Text kein gültiger Term ist.
+function parseTerm(str) {
+  if (!str) return null;
+  const s = str.trim().replace(/\s+/g, '');
+  if (s === '') return null;
+  const m = s.match(/^(\d+)?([a-zA-Z]*)$/);
+  if (!m) return null;
+  const coefStr = m[1];
+  const varsStr = (m[2] || '').toLowerCase();
+  if (coefStr === undefined && varsStr === '') return null;
+  const coef = coefStr !== undefined ? parseInt(coefStr, 10) : 1;
+  const vars = varsStr.split('').sort();
+  return { coef, vars };
+}
+
+function sameVars(a, b) {
+  return a.join('') === b.join('');
+}
+
+// Wählt für ein Kreuzpaar (z. B. N1 & D2), ob eine Variable komplett wegkürzt,
+// stehen bleibt (im Zähler oder Nenner des Endergebnisses), oder ob gar keine Variable vorkommt.
+function pickCrossPairVar(varNames, usedVars) {
+  const roll = Math.random();
+  let mode;
+  if (roll < 0.35) mode = 'none';
+  else if (roll < 0.70) mode = 'cancel';
+  else if (roll < 0.85) mode = 'leftoverNum';
+  else mode = 'leftoverDen';
+
+  if (mode === 'none') return { mode, varA: [], varB: [] };
+
+  let v;
+  do { v = varNames[randInt(0, varNames.length - 1)]; } while (usedVars.has(v));
+  usedVars.add(v);
+
+  if (mode === 'cancel') return { mode, varA: [v], varB: [v], var: v };
+  if (mode === 'leftoverNum') return { mode, varA: [v], varB: [], var: v };
+  return { mode, varA: [], varB: [v], var: v }; // leftoverDen
+}
+
 function generateFracMulProblems(cfg) {
   const varNames = ['x', 'y', 'a', 'b', 'n'];
   const list = [];
   for (let i = 0; i < cfg.count; i++) {
-    const useVar1 = Math.random() < 0.65;
-    const useVar2 = Math.random() < 0.65;
-    let var1 = null, var2 = null;
-    if (useVar1) var1 = varNames[randInt(0, varNames.length - 1)];
-    if (useVar2) { do { var2 = varNames[randInt(0, varNames.length - 1)]; } while (var2 === var1); }
+    const usedVars = new Set();
+    const pair1 = pickCrossPairVar(varNames, usedVars); // betrifft N1 & D2 (Faktor k1)
+    const pair2 = pickCrossPairVar(varNames, usedVars); // betrifft N2 & D1 (Faktor k2)
 
     const k1 = randInt(2, 9), k2 = randInt(2, 9);
     const m1 = randInt(1, 5), n1v = randInt(1, 5);
     const m2 = randInt(1, 5), n2v = randInt(1, 5);
 
-    // Fraktion A = N1/D1, Fraktion B = N2/D2.
-    // N1 & D2 teilen den Faktor k1 (+ var1) -> übers Kreuz kürzbar.
-    // N2 & D1 teilen den Faktor k2 (+ var2) -> übers Kreuz kürzbar.
-    const N1 = { coef: k1 * m1, vars: var1 ? [var1] : [] };
-    const D1 = { coef: k2 * n2v, vars: var2 ? [var2] : [] };
-    const N2 = { coef: k2 * m2, vars: var2 ? [var2] : [] };
-    const D2 = { coef: k1 * n1v, vars: var1 ? [var1] : [] };
+    const N1 = { coef: k1 * m1, vars: pair1.varA };
+    const D2 = { coef: k1 * n1v, vars: pair1.varB };
+    const N2 = { coef: k2 * m2, vars: pair2.varA };
+    const D1 = { coef: k2 * n2v, vars: pair2.varB };
 
-    const trueNum = m1 * m2;
-    const trueDen = n1v * n2v;
+    const leftoverNumVars = []
+      .concat(pair1.mode === 'leftoverNum' ? [pair1.var] : [])
+      .concat(pair2.mode === 'leftoverNum' ? [pair2.var] : [])
+      .sort();
+    const leftoverDenVars = []
+      .concat(pair1.mode === 'leftoverDen' ? [pair1.var] : [])
+      .concat(pair2.mode === 'leftoverDen' ? [pair2.var] : [])
+      .sort();
+
+    const trueNum = { coef: m1 * m2, vars: leftoverNumVars };
+    const trueDen = { coef: n1v * n2v, vars: leftoverDenVars };
 
     list.push({
       inputMode: 'fraction',
+      fieldType: 'text',
       taskHTML: `${fracHTML(termStr(N1), termStr(D1))}<span class="op">·</span>${fracHTML(termStr(N2), termStr(D2))}<span class="op">=</span>`,
-      checkFn: (numVal, denVal) => {
-        if (isNaN(numVal) || isNaN(denVal) || denVal === 0) return false;
-        return numVal * trueDen === trueNum * denVal;
+      checkFn: (numStr, denStr) => {
+        const un = parseTerm(numStr);
+        const ud = parseTerm(denStr);
+        if (!un || !ud || ud.coef === 0) return false;
+        if (!sameVars(un.vars, trueNum.vars)) return false;
+        if (!sameVars(ud.vars, trueDen.vars)) return false;
+        return un.coef * trueDen.coef === trueNum.coef * ud.coef;
       }
     });
   }
@@ -642,13 +695,14 @@ function renderProblems() {
     cell.className = 'cell' + (p.inputMode === 'fraction' ? ' frac-cell' : '');
     cell.id = 'cell-' + idx;
     if (p.inputMode === 'fraction') {
+      const fieldType = p.fieldType === 'text' ? 'text' : 'number';
       cell.innerHTML = `
         <span class="nr">${idx + 1}.</span>
         <span class="task">${p.taskHTML}</span>
         <span class="frac-input">
-          <input type="number" id="input-${idx}-num" disabled>
+          <input type="${fieldType}" id="input-${idx}-num" disabled>
           <span class="frac-bar"></span>
-          <input type="number" id="input-${idx}-den" disabled>
+          <input type="${fieldType}" id="input-${idx}-den" disabled>
         </span>
       `;
     } else {
@@ -738,7 +792,7 @@ function finishAndGrade() {
       const denStr = denInput.value.trim();
       if (numStr === '' && denStr === '') {
         cell.classList.add('empty');
-      } else if (p.checkFn(parseInt(numStr, 10), parseInt(denStr, 10))) {
+      } else if (p.checkFn(numStr, denStr)) {
         cell.classList.add('correct');
         correctCount++;
       } else {
