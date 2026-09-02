@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kopfrechnen</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    background: #f4f6f8;
+    margin: 0;
+    padding: 20px;
+    color: #222;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 4px 0; }
+  h2 { font-size: 18px; margin: 0 0 14px 0; }
+  .sub { color: #666; font-size: 13px; margin-bottom: 16px; }
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* --- Login --- */
+  .login-box {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 24px;
+    max-width: 340px;
+    margin: 60px auto 0 auto;
+  }
+  .login-box label { display: block; font-size: 13px; color: #555; margin: 12px 0 4px; }
+  .login-box input {
+    width: 100%;
+    padding: 9px 10px;
+    font-size: 15px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+  }
+  .login-box .err { color: #d9534f; font-size: 13px; margin-top: 10px; min-height: 16px; }
+  .login-box .hint { color: #888; font-size: 12px; margin-top: 14px; }
+
+  /* --- Buttons general --- */
+  button {
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: bold;
+    padding: 10px 22px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+  }
+  .btn-primary { background: #28a745; color: white; }
+  .btn-primary:disabled { background: #aaa; cursor: not-allowed; }
+  .btn-secondary { background: #e9ecef; color: #333; }
+  .btn-link { background: none; color: #4472C4; padding: 6px 0; text-decoration: underline; }
+
+  /* --- Top bar with user + logout, shown on menu/stats --- */
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  .topbar .who { font-size: 14px; color: #555; }
+
+  /* --- Menu cards --- */
+  .menu-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .menu-card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 20px;
+    cursor: pointer;
+    text-align: center;
+  }
+  .menu-card:hover { border-color: #28a745; }
+  .menu-card .t { font-size: 17px; font-weight: bold; margin-bottom: 6px; }
+  .menu-card .s { font-size: 13px; color: #777; }
+
+  /* --- Exercise bar/grid (from original files) --- */
+  .bar {
+    position: sticky;
+    top: 0;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 18px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    z-index: 10;
+  }
+  .bar-item { text-align: center; min-width: 90px; }
+  .bar-label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+  .bar-value { font-size: 24px; font-weight: bold; }
+  #timerValue.warn { color: #d9534f; }
+  #scoreValue { color: #4472C4; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+  @media (max-width: 700px) {
+    .grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  .cell {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 15px;
+  }
+  .cell .nr { color: #999; font-size: 11px; width: 18px; }
+  .cell .task { white-space: nowrap; }
+  .cell input {
+    width: 68px;
+    font-family: inherit;
+    font-size: 15px;
+    padding: 5px 6px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    text-align: right;
+  }
+  .cell input:disabled { background: #f0f0f0; color: #333; }
+  .cell.correct { background: #d4edda; border-color: #28a745; }
+  .cell.wrong { background: #f8d7da; border-color: #dc3545; }
+  .cell.empty { background: #f1f1f1; }
+
+  .locked-note {
+    display: none;
+    background: #fff3cd;
+    border: 1px solid #ffe08a;
+    padding: 10px 14px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    font-size: 14px;
+  }
+
+  .exercise-actions { margin-top: 16px; display: flex; gap: 10px; }
+
+  /* --- Stats --- */
+  .stats-box {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 18px;
+    margin-bottom: 18px;
+  }
+  .stats-filter { margin-bottom: 14px; }
+  .stats-filter select {
+    font-size: 14px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+  }
+  table.history { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.history th, table.history td {
+    text-align: left;
+    padding: 6px 8px;
+    border-bottom: 1px solid #eee;
+  }
+  table.history th { color: #888; font-weight: normal; font-size: 12px; text-transform: uppercase; }
+  .empty-note { color: #888; font-size: 14px; padding: 10px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- LOGIN SCREEN -->
+  <div class="screen active" id="screen-login">
+    <div class="login-box">
+      <h1 style="text-align:center;">Kopfrechnen</h1>
+      <div class="sub" style="text-align:center;">Anmelden, um deinen Fortschritt zu sehen</div>
+      <label for="loginName">Name</label>
+      <input type="text" id="loginName" autocomplete="username" placeholder="z. B. Anna">
+      <label for="loginPass">Passwort</label>
+      <input type="password" id="loginPass" autocomplete="current-password" placeholder="Passwort">
+      <div style="margin-top:18px; display:flex; gap:10px;">
+        <button class="btn-primary" id="loginBtn" style="flex:1;">Anmelden</button>
+      </div>
+      <div class="err" id="loginErr"></div>
+      <div class="hint">Neuer Name + Passwort erstellt automatisch ein neues Konto auf diesem iPad.</div>
+    </div>
+  </div>
+
+  <!-- MENU SCREEN -->
+  <div class="screen" id="screen-menu">
+    <div class="topbar">
+      <div>
+        <h1 style="margin-bottom:2px;">Kopfrechnen</h1>
+        <div class="who">Angemeldet als <strong id="menuWho"></strong></div>
+      </div>
+      <button class="btn-secondary" id="logoutBtn">Abmelden</button>
+    </div>
+
+    <h2>Übung wählen</h2>
+    <div class="menu-grid" id="menuGrid"></div>
+
+    <button class="btn-link" id="statsBtn">📊 Meine Statistik ansehen</button>
+  </div>
+
+  <!-- EXERCISE SCREEN -->
+  <div class="screen" id="screen-exercise">
+    <h1 id="exerciseTitle"></h1>
+    <div class="sub" id="exerciseSub"></div>
+
+    <div class="bar">
+      <div class="bar-item">
+        <div class="bar-label">Zeit</div>
+        <div class="bar-value" id="timerValue">10:00</div>
+      </div>
+      <div class="bar-item">
+        <div class="bar-label">Punkte</div>
+        <div class="bar-value" id="scoreValue">–/80</div>
+      </div>
+      <div>
+        <button class="btn-primary" id="startBtn">Start</button>
+        <button class="btn-secondary" id="newBtn">Neue Zahlen</button>
+      </div>
+    </div>
+
+    <div class="locked-note" id="lockedNote">
+      ⏱️ Zeit abgelaufen – die Eingabe ist gesperrt. Richtige Antworten sind grün, falsche rot markiert.
+    </div>
+
+    <div class="grid" id="grid"></div>
+
+    <div class="exercise-actions">
+      <button class="btn-secondary" id="backToMenuBtn">← Zurück zum Menü</button>
+      <button class="btn-secondary" id="toStatsBtn">📊 Statistik ansehen</button>
+    </div>
+  </div>
+
+  <!-- STATS SCREEN -->
+  <div class="screen" id="screen-stats">
+    <div class="topbar">
+      <h1>Meine Statistik</h1>
+      <button class="btn-secondary" id="statsBackBtn">← Zurück zum Menü</button>
+    </div>
+
+    <div class="stats-box">
+      <div class="stats-filter">
+        <label for="statsFilter" style="font-size:13px; color:#555;">Übung: </label>
+        <select id="statsFilter"></select>
+      </div>
+      <canvas id="statsChart" height="110"></canvas>
+      <div class="empty-note" id="statsEmptyNote" style="display:none;">
+        Noch keine Ergebnisse für diese Übung. Löse eine Runde, dann erscheint hier dein Fortschritt.
+      </div>
+    </div>
+
+    <div class="stats-box">
+      <h2 style="margin-bottom:10px;">Verlauf</h2>
+      <table class="history" id="historyTable">
+        <thead>
+          <tr><th>Datum</th><th>Übung</th><th>Ergebnis</th></tr>
+        </thead>
+        <tbody id="historyBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-date-fns/3.0.0/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script>
+/* =========================================================
+   KONFIGURATION DER 3 ÜBUNGEN
+   ========================================================= */
+const EXERCISES = {
+  k10000: {
+    title: "Rechnen bis 10'000",
+    sub: "80 Aufgaben · Addition & Subtraktion · alle Ergebnisse positiv",
+    cap: 10000,
+    addAMin: 25, addAMax: 8900, addBMin: 25,
+    subAMin: 100, subAMax: 10000, subBMin: 25
+  },
+  k20000: {
+    title: "Rechnen bis 20'000",
+    sub: "80 Aufgaben · Addition & Subtraktion · alle Ergebnisse positiv",
+    cap: 20000,
+    addAMin: 50, addAMax: 17800, addBMin: 50,
+    subAMin: 200, subAMax: 20000, subBMin: 50
+  },
+  k100000: {
+    title: "Rechnen bis 100'000",
+    sub: "80 Aufgaben · Addition & Subtraktion · alle Ergebnisse positiv",
+    cap: 100000,
+    addAMin: 100, addAMax: 89000, addBMin: 100,
+    subAMin: 1000, subAMax: 100000, subBMin: 100
+  },
+  k2000: {
+    title: "Rechnen bis 2'000",
+    sub: "80 Aufgaben · Addition & Subtraktion · Zahlen zwischen 100 und 2'000",
+    cap: 2000,
+    addAMin: 100, addAMax: 1780, addBMin: 100,
+    subAMin: 200, subAMax: 2000, subBMin: 100
+  }
+};
+const DURATION_SECONDS = 10 * 60;
+
+/* =========================================================
+   SPEICHER (localStorage) — gilt nur für dieses iPad/Gerät
+   ========================================================= */
+const STORAGE_KEY = 'kopfrechnen_users_v1';
+const SESSION_KEY = 'kopfrechnen_session_v1';
+
+function loadUsers() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
+  catch (e) { return {}; }
+}
+function saveUsers(users) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
+}
+function getCurrentUser() {
+  return localStorage.getItem(SESSION_KEY);
+}
+function setCurrentUser(name) {
+  localStorage.setItem(SESSION_KEY, name);
+}
+function clearCurrentUser() {
+  localStorage.removeItem(SESSION_KEY);
+}
+
+/* =========================================================
+   SCREEN NAVIGATION
+   ========================================================= */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+/* =========================================================
+   LOGIN
+   ========================================================= */
+const loginName = document.getElementById('loginName');
+const loginPass = document.getElementById('loginPass');
+const loginErr = document.getElementById('loginErr');
+
+document.getElementById('loginBtn').addEventListener('click', attemptLogin);
+loginPass.addEventListener('keydown', e => { if (e.key === 'Enter') attemptLogin(); });
+
+function attemptLogin() {
+  const name = loginName.value.trim();
+  const pass = loginPass.value;
+  loginErr.textContent = '';
+
+  if (!name || !pass) {
+    loginErr.textContent = 'Bitte Name und Passwort eingeben.';
+    return;
+  }
+
+  const users = loadUsers();
+  if (users[name]) {
+    if (users[name].password !== pass) {
+      loginErr.textContent = 'Falsches Passwort für diesen Namen.';
+      return;
+    }
+  } else {
+    users[name] = { password: pass, results: [] };
+    saveUsers(users);
+  }
+
+  setCurrentUser(name);
+  enterMenu(name);
+}
+
+function logout() {
+  clearCurrentUser();
+  loginName.value = '';
+  loginPass.value = '';
+  loginErr.textContent = '';
+  showScreen('screen-login');
+}
+document.getElementById('logoutBtn').addEventListener('click', logout);
+
+/* =========================================================
+   MENU
+   ========================================================= */
+function enterMenu(name) {
+  document.getElementById('menuWho').textContent = name;
+  const grid = document.getElementById('menuGrid');
+  grid.innerHTML = '';
+  Object.keys(EXERCISES).forEach(key => {
+    const cfg = EXERCISES[key];
+    const card = document.createElement('div');
+    card.className = 'menu-card';
+    card.innerHTML = `<div class="t">${cfg.title}</div><div class="s">${cfg.sub}</div>`;
+    card.addEventListener('click', () => startExercise(key));
+    grid.appendChild(card);
+  });
+  showScreen('screen-menu');
+}
+
+document.getElementById('statsBtn').addEventListener('click', () => enterStats());
+document.getElementById('toStatsBtn').addEventListener('click', () => enterStats());
+document.getElementById('statsBackBtn').addEventListener('click', () => enterMenu(getCurrentUser()));
+document.getElementById('backToMenuBtn').addEventListener('click', () => {
+  clearInterval(timerInterval);
+  enterMenu(getCurrentUser());
+});
+
+/* =========================================================
+   EXERCISE ENGINE (generisch für alle 3 Übungen)
+   ========================================================= */
+let currentExerciseKey = null;
+let problems = [];
+let timerInterval = null;
+let remaining = DURATION_SECONDS;
+let running = false;
+let graded = false;
+
+const grid = document.getElementById('grid');
+const startBtn = document.getElementById('startBtn');
+const newBtn = document.getElementById('newBtn');
+const timerValue = document.getElementById('timerValue');
+const scoreValue = document.getElementById('scoreValue');
+const lockedNote = document.getElementById('lockedNote');
+
+function randInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function generateProblems(cfg) {
+  const list = [];
+  for (let i = 0; i < 40; i++) {
+    const a = randInt(cfg.addAMin, cfg.addAMax);
+    const b = randInt(cfg.addBMin, cfg.cap - a);
+    list.push({ a, op: '+', b, result: a + b });
+  }
+  for (let i = 0; i < 40; i++) {
+    const a = randInt(cfg.subAMin, cfg.subAMax);
+    const b = randInt(cfg.subBMin, a - 1);
+    list.push({ a, op: '-', b, result: a - b });
+  }
+  for (let i = list.length - 1; i > 0; i--) {
+    const j = randInt(0, i);
+    [list[i], list[j]] = [list[j], list[i]];
+  }
+  return list;
+}
+
+function renderProblems() {
+  grid.innerHTML = '';
+  problems.forEach((p, idx) => {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    cell.id = 'cell-' + idx;
+    cell.innerHTML = `
+      <span class="nr">${idx + 1}.</span>
+      <span class="task">${p.a} ${p.op} ${p.b} =</span>
+      <input type="number" id="input-${idx}" disabled>
+    `;
+    grid.appendChild(cell);
+  });
+}
+
+function startExercise(key) {
+  currentExerciseKey = key;
+  const cfg = EXERCISES[key];
+  document.getElementById('exerciseTitle').textContent = cfg.title;
+  document.getElementById('exerciseSub').textContent = cfg.sub + ' · neue Zahlen bei jedem Öffnen';
+  resetAll();
+  showScreen('screen-exercise');
+}
+
+function resetAll() {
+  clearInterval(timerInterval);
+  remaining = DURATION_SECONDS;
+  running = false;
+  graded = false;
+  problems = generateProblems(EXERCISES[currentExerciseKey]);
+  renderProblems();
+  timerValue.textContent = formatTime(remaining);
+  timerValue.classList.remove('warn');
+  scoreValue.textContent = '–/80';
+  lockedNote.style.display = 'none';
+  startBtn.disabled = false;
+  startBtn.textContent = 'Start';
+}
+newBtn.addEventListener('click', resetAll);
+
+function formatTime(sec) {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+}
+
+function startTimer() {
+  if (running) return;
+  running = true;
+  startBtn.disabled = true;
+  startBtn.textContent = 'Läuft…';
+  problems.forEach((p, idx) => {
+    document.getElementById('input-' + idx).disabled = false;
+  });
+  document.getElementById('input-0').focus();
+
+  timerInterval = setInterval(() => {
+    remaining--;
+    timerValue.textContent = formatTime(remaining);
+    if (remaining <= 30) timerValue.classList.add('warn');
+    if (remaining <= 0) {
+      clearInterval(timerInterval);
+      finishAndGrade();
+    }
+  }, 1000);
+}
+startBtn.addEventListener('click', startTimer);
+
+function finishAndGrade() {
+  if (graded) return;
+  graded = true;
+  let correctCount = 0;
+  problems.forEach((p, idx) => {
+    const input = document.getElementById('input-' + idx);
+    const cell = document.getElementById('cell-' + idx);
+    input.disabled = true;
+    const val = input.value.trim();
+    if (val === '') {
+      cell.classList.add('empty');
+    } else if (parseInt(val, 10) === p.result) {
+      cell.classList.add('correct');
+      correctCount++;
+    } else {
+      cell.classList.add('wrong');
+    }
+  });
+  scoreValue.textContent = correctCount + '/80';
+  lockedNote.style.display = 'block';
+  startBtn.textContent = 'Fertig';
+  timerValue.textContent = '00:00';
+
+  saveResult(currentExerciseKey, correctCount);
+}
+
+function saveResult(exerciseKey, score) {
+  const name = getCurrentUser();
+  if (!name) return;
+  const users = loadUsers();
+  if (!users[name]) return;
+  users[name].results.push({
+    exercise: exerciseKey,
+    date: new Date().toISOString(),
+    score: score,
+    total: 80
+  });
+  saveUsers(users);
+}
+
+/* =========================================================
+   STATISTIK
+   ========================================================= */
+let chartInstance = null;
+const statsFilter = document.getElementById('statsFilter');
+
+function enterStats() {
+  clearInterval(timerInterval);
+  populateStatsFilter();
+  renderStats();
+  showScreen('screen-stats');
+}
+
+function populateStatsFilter() {
+  statsFilter.innerHTML = '';
+  const optAll = document.createElement('option');
+  optAll.value = 'all';
+  optAll.textContent = 'Alle Übungen';
+  statsFilter.appendChild(optAll);
+  Object.keys(EXERCISES).forEach(key => {
+    const opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = EXERCISES[key].title;
+    statsFilter.appendChild(opt);
+  });
+}
+statsFilter.addEventListener('change', renderStats);
+
+function getResults() {
+  const name = getCurrentUser();
+  const users = loadUsers();
+  if (!name || !users[name]) return [];
+  return users[name].results.slice().sort((a, b) => new Date(a.date) - new Date(b.date));
+}
+
+function renderStats() {
+  const filter = statsFilter.value;
+  const all = getResults();
+  const filtered = filter === 'all' ? all : all.filter(r => r.exercise === filter);
+
+  renderHistoryTable(filtered);
+  renderChart(filter, all, filtered);
+}
+
+function renderHistoryTable(rows) {
+  const body = document.getElementById('historyBody');
+  body.innerHTML = '';
+  const sorted = rows.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
+  sorted.forEach(r => {
+    const tr = document.createElement('tr');
+    const d = new Date(r.date);
+    const dateStr = d.toLocaleDateString('de-CH') + ' ' + d.toLocaleTimeString('de-CH', {hour:'2-digit', minute:'2-digit'});
+    tr.innerHTML = `<td>${dateStr}</td><td>${EXERCISES[r.exercise] ? EXERCISES[r.exercise].title : r.exercise}</td><td>${r.score}/${r.total}</td>`;
+    body.appendChild(tr);
+  });
+}
+
+function renderChart(filter, all, filtered) {
+  const canvas = document.getElementById('statsChart');
+  const emptyNote = document.getElementById('statsEmptyNote');
+
+  if (filtered.length === 0) {
+    canvas.style.display = 'none';
+    emptyNote.style.display = 'block';
+    if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+    return;
+  }
+  canvas.style.display = 'block';
+  emptyNote.style.display = 'none';
+
+  const colors = { k10000: '#4472C4', k20000: '#28a745', k100000: '#e67e22', k2000: '#9b59b6' };
+  // Immer EIN Diagramm: jeder Übungstyp ist ein eigenes, farbiges Punkte-Set.
+  // Der Filter oben schränkt nur ein, WELCHE Übungen als Punkte erscheinen.
+  const keysToShow = filter === 'all' ? Object.keys(EXERCISES) : [filter];
+  let datasets = [];
+  keysToShow.forEach(key => {
+    const rows = all.filter(r => r.exercise === key);
+    if (rows.length === 0) return;
+    datasets.push({
+      label: EXERCISES[key].title,
+      data: rows.map(r => ({ x: r.date, y: r.score })),
+      borderColor: colors[key] || '#666',
+      backgroundColor: colors[key] || '#666',
+      showLine: false,
+      pointRadius: 6,
+      pointHoverRadius: 8
+    });
+  });
+
+  if (chartInstance) chartInstance.destroy();
+  chartInstance = new Chart(canvas.getContext('2d'), {
+    type: 'scatter',
+    data: { datasets },
+    options: {
+      responsive: true,
+      scales: {
+        x: {
+          type: 'time',
+          time: { unit: 'day', tooltipFormat: 'dd.MM.yyyy HH:mm' },
+          title: { display: true, text: 'Datum' }
+        },
+        y: {
+          min: 0, max: 80,
+          title: { display: true, text: 'Anzahl richtig (von 80)' }
+        }
+      },
+      plugins: { legend: { display: true, position: 'top' } }
+    }
+  });
+}
+
+/* =========================================================
+   BEIM LADEN: angemeldeten Nutzer wiederherstellen
+   ========================================================= */
+(function init() {
+  const name = getCurrentUser();
+  if (name) {
+    const users = loadUsers();
+    if (users[name]) {
+      enterMenu(name);
+      return;
+    }
+  }
+  showScreen('screen-login');
+})();
+</script>
+</body>
+</html>
