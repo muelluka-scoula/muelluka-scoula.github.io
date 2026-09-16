@@ -124,11 +124,8 @@
 
   .grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
     gap: 10px;
-  }
-  @media (max-width: 700px) {
-    .grid { grid-template-columns: repeat(2, 1fr); }
   }
   .cell {
     background: #fff;
@@ -137,11 +134,12 @@
     padding: 8px 10px;
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 6px;
     font-size: 15px;
   }
   .cell .nr { color: #999; font-size: 11px; width: 18px; }
-  .cell .task { white-space: nowrap; }
+  .cell .task { white-space: normal; }
   .cell input {
     width: 68px;
     font-family: inherit;
@@ -249,6 +247,46 @@
   table.testresult th, table.testresult td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #eee; }
   table.testresult th { color: #888; font-weight: normal; font-size: 12px; text-transform: uppercase; }
   .score-big { font-size: 38px; font-weight: bold; text-align: center; margin: 6px 0 20px; color: #28a745; }
+
+  /* --- Kapitel 2a: dual-Input & choice3-Buttons --- */
+  .dual-input { display: flex; gap: 14px; align-items: flex-end; }
+  .dual-field { display: flex; flex-direction: column; gap: 3px; }
+  .dual-field label { font-size: 11px; color: #888; }
+  .dual-field input { width: 90px; padding: 6px 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 15px; }
+  .cell.dual-cell { display: flex; flex-direction: column; gap: 10px; }
+  .choice-buttons { display: flex; gap: 8px; margin-top: 6px; }
+  .choice-btn { width: 46px; height: 38px; font-size: 17px; font-weight: bold; background: #e9ecef; color: #333; border-radius: 6px; }
+  .choice-btn.chosen { background: #007bff; color: #fff; }
+  .choice-btn:disabled { cursor: not-allowed; opacity: .6; }
+  .cell.choice-cell.correct .choice-btn.chosen { background: #28a745; color: #fff; opacity: 1; }
+  .cell.choice-cell.wrong .choice-btn.chosen { background: #dc3545; color: #fff; opacity: 1; }
+  .cell .task sup { font-size: 0.7em; }
+  .lz-note { background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 14px 18px; margin-bottom: 18px; font-size: 13px; color: #555; line-height: 1.6; }
+  .lz-note strong { color: #333; }
+  h3.lz-heading { font-size: 14px; color: #888; text-transform: uppercase; letter-spacing: .03em; margin: 22px 0 8px; }
+  h3.lz-heading:first-of-type { margin-top: 4px; }
+
+  /* --- Einspaltiges Layout (z. B. Potenzen vergleichen) --- */
+  .grid.single-col { grid-template-columns: 1fr; }
+  .grid.single-col .cell { flex-wrap: nowrap; }
+  .grid.single-col .cell .task { white-space: nowrap; }
+
+  /* --- Distributivgesetz: Lückentext mit mehreren kleinen Eingabefeldern --- */
+  .cell.blanks-cell { display: block; }
+  .cell.blanks-cell .task { line-height: 2.2; white-space: normal; }
+  .inline-blank {
+    display: inline-block; width: 48px; padding: 3px 4px; margin: 0 2px;
+    border: 1px solid #ccc; border-radius: 5px; text-align: center;
+    font-family: inherit; font-size: 15px; vertical-align: middle;
+  }
+  .inline-blank:disabled { background: #f0f0f0; color: #333; }
+  .inline-blank.blank-correct { background: #d4edda; border-color: #28a745; color: #155724; }
+  .inline-blank.blank-wrong { background: #f8d7da; border-color: #dc3545; color: #721c24; }
+
+  /* --- Anzeige der richtigen Lösung bei falschen/leeren Antworten --- */
+  .correct-answer { flex-basis: 100%; color: #dc3545; font-size: 12px; font-weight: 600; margin-top: 2px; }
+  .cell.blanks-cell .correct-answer { margin-top: 6px; }
+  .cell.dual-cell .correct-answer { flex-basis: auto; }
 </style>
 </head>
 <body>
@@ -299,6 +337,55 @@
   </div>
 
   <!-- MENU SCREEN (Mathe) -->
+  <!-- MATHE: KOPFRECHNEN / 7. KLASSE WÄHLEN -->
+  <div class="screen" id="screen-mathmenu">
+    <div class="topbar">
+      <h1>Mathe</h1>
+      <button class="btn-secondary" id="mathTopMenuBackBtn">← Zurück</button>
+    </div>
+    <div class="menu-grid">
+      <div class="menu-card" id="goKopfrechnenBtn">
+        <div class="t">🧮 Kopfrechnen</div>
+        <div class="s">Grundrechenarten &amp; Brüche im Kopf üben</div>
+      </div>
+      <div class="menu-card" id="goKlasse7Btn">
+        <div class="t">📘 7. Klasse</div>
+        <div class="s">Übungen passend zum Schulbuch</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MATHE: 7. KLASSE – KAPITEL WÄHLEN -->
+  <div class="screen" id="screen-math-klasse7">
+    <div class="topbar">
+      <h1>7. Klasse</h1>
+      <button class="btn-secondary" id="klasse7BackBtn">← Zurück</button>
+    </div>
+    <h2>Kapitel wählen</h2>
+    <div class="menu-grid">
+      <div class="menu-card" id="goKapitel2aBtn">
+        <div class="t">Kapitel 2a</div>
+        <div class="s">Die Welt der natürlichen Zahlen: Potenzen / Regeln und Gesetze</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MATHE: KAPITEL 2a – ÜBUNGEN -->
+  <div class="screen" id="screen-math-2a-menu">
+    <div class="topbar">
+      <h1>Kapitel 2a – Potenzen / Regeln und Gesetze</h1>
+      <button class="btn-secondary" id="kapitel2aBackBtn">← Zurück</button>
+    </div>
+    <div class="lz-note">
+      <strong>Hinweis:</strong> Diese Übungen decken einen Teil der intendierten Lernziele ab (Potenzen berechnen und notieren, vergleichen, Rechengesetze erkennen, geschickt rechnen, grosse Zahlen als Zehnerpotenz). Ziele wie „Basis/Hochzahl/Potenz erklären“, „Terme mit Worten beschreiben“, das Zahlenstrahl- und das Zahlengitter-Lernziel werden am besten weiterhin im Unterricht bzw. im Arbeitsheft geübt.
+    </div>
+
+    <h3 class="lz-heading">Übungen</h3>
+    <div id="math2aGrid" class="menu-grid"></div>
+
+    <button class="btn-link" id="kapitel2aStatsBtn">📊 Meine Statistik ansehen</button>
+  </div>
+
   <div class="screen" id="screen-menu">
     <div class="topbar">
       <div>
@@ -323,7 +410,7 @@
     <div class="sub" id="exerciseSub"></div>
 
     <div class="bar">
-      <div class="bar-item">
+      <div class="bar-item" id="timerBarItem">
         <div class="bar-label">Zeit</div>
         <div class="bar-value" id="timerValue">10:00</div>
       </div>
@@ -333,12 +420,13 @@
       </div>
       <div>
         <button class="btn-primary" id="startBtn">Start</button>
+        <button class="btn-primary" id="finishNowBtn" style="display:none;">✓ Auswerten</button>
         <button class="btn-secondary" id="newBtn">Neue Zahlen</button>
       </div>
     </div>
 
     <div class="locked-note" id="lockedNote">
-      ⏱️ Zeit abgelaufen – die Eingabe ist gesperrt. Richtige Antworten sind grün, falsche rot markiert.
+      Die Eingabe ist gesperrt. Richtige Antworten sind grün, falsche rot markiert.
     </div>
 
     <div class="grid" id="grid"></div>
@@ -560,8 +648,62 @@ const EXERCISES = {
     title: "Brüche Multiplikation (Kreuz kürzen)",
     sub: "16 Aufgaben · teils mit Variablen · vorher übers Kreuz kürzen, dann multiplizieren",
     count: 16
+  },
+  z2a_potcalc: {
+    type: 'potCalc',
+    title: "Potenzen ausrechnen",
+    sub: "12 Aufgaben · Basis und Hochzahl gegeben, Wert der Potenz berechnen",
+    count: 12,
+    timed: false
+  },
+  z2a_potnotate: {
+    type: 'potNotate',
+    title: "Als Potenz schreiben",
+    sub: "10 Aufgaben · Produkt aus lauter gleichen Faktoren als Potenz notieren (Basis & Hochzahl)",
+    count: 10,
+    timed: false
+  },
+  z2a_potcompare: {
+    type: 'potCompare',
+    title: "Potenzen vergleichen",
+    sub: "12 Aufgaben · <, > oder = einsetzen",
+    count: 12,
+    timed: false,
+    singleColumn: true
+  },
+  z2a_termcalc: {
+    type: 'termCalc',
+    title: "Terme berechnen",
+    sub: "12 Aufgaben · Punkt-vor-Strich, Klammern und geschicktes Rechnen",
+    count: 12,
+    timed: false
+  },
+  z2a_lawid: {
+    type: 'lawId',
+    title: "Gesetz erkennen (A, K, D)",
+    sub: "10 Aufgaben · Assoziativ-, Kommutativ- oder Distributivgesetz erkennen",
+    count: 10,
+    timed: false,
+    singleColumn: true
+  },
+  z2a_distributive: {
+    type: 'distributive',
+    title: "Distributivgesetz üben",
+    sub: "10 Aufgaben · Lücken beim Ausmultiplizieren bzw. Dividieren einer Summe füllen",
+    count: 10,
+    timed: false,
+    singleColumn: true
+  },
+  z2a_bignum: {
+    type: 'bigNumbers',
+    title: "Grosse Zahlen als Zehnerpotenz",
+    sub: "10 Aufgaben · Zahl in der Form a · 10ⁿ schreiben",
+    count: 10,
+    timed: false
   }
 };
+const KOPFRECHNEN_KEYS = ['k10000', 'k20000', 'k100000', 'k2000', 'k600', 'fracAdd', 'fracMulCross'];
+const KAPITEL_2A_KEYS = ['z2a_potcalc', 'z2a_potnotate', 'z2a_potcompare', 'z2a_termcalc', 'z2a_lawid', 'z2a_distributive', 'z2a_bignum'];
 const DURATION_SECONDS = 10 * 60;
 
 /* =========================================================
@@ -643,27 +785,59 @@ document.getElementById('mathHomeBtn').addEventListener('click', () => enterMain
 /* =========================================================
    MENU
    ========================================================= */
+let mathExerciseReturnScreen = 'screen-menu';
+
 function enterMathMenu(name) {
   document.getElementById('menuWho').textContent = name;
   const grid = document.getElementById('menuGrid');
   grid.innerHTML = '';
-  Object.keys(EXERCISES).forEach(key => {
+  KOPFRECHNEN_KEYS.forEach(key => {
     const cfg = EXERCISES[key];
     const card = document.createElement('div');
     card.className = 'menu-card';
     card.innerHTML = `<div class="t">${cfg.title}</div><div class="s">${cfg.sub}</div>`;
-    card.addEventListener('click', () => startExercise(key));
+    card.addEventListener('click', () => { mathExerciseReturnScreen = 'screen-menu'; startExercise(key); });
     grid.appendChild(card);
   });
   showScreen('screen-menu');
 }
 
+function enterMathTopMenu() {
+  showScreen('screen-mathmenu');
+}
+
+function enterMathKlasse7() {
+  showScreen('screen-math-klasse7');
+}
+
+function enterMath2aMenu() {
+  const grid = document.getElementById('math2aGrid');
+  grid.innerHTML = '';
+  KAPITEL_2A_KEYS.forEach(key => {
+    const cfg = EXERCISES[key];
+    const card = document.createElement('div');
+    card.className = 'menu-card';
+    card.innerHTML = `<div class="t">${cfg.title}</div><div class="s">${cfg.sub}</div>`;
+    card.addEventListener('click', () => { mathExerciseReturnScreen = 'screen-math-2a-menu'; startExercise(key); });
+    grid.appendChild(card);
+  });
+  showScreen('screen-math-2a-menu');
+}
+
+document.getElementById('mathTopMenuBackBtn').addEventListener('click', () => enterMainMenu(getCurrentUser()));
+document.getElementById('goKopfrechnenBtn').addEventListener('click', () => enterMathMenu(getCurrentUser()));
+document.getElementById('goKlasse7Btn').addEventListener('click', () => enterMathKlasse7());
+document.getElementById('klasse7BackBtn').addEventListener('click', () => enterMathTopMenu());
+document.getElementById('goKapitel2aBtn').addEventListener('click', () => enterMath2aMenu());
+document.getElementById('kapitel2aBackBtn').addEventListener('click', () => enterMathKlasse7());
+document.getElementById('kapitel2aStatsBtn').addEventListener('click', () => enterStats('screen-math-2a-menu'));
+
 document.getElementById('statsBtn').addEventListener('click', () => enterStats('screen-menu'));
-document.getElementById('toStatsBtn').addEventListener('click', () => enterStats('screen-menu'));
+document.getElementById('toStatsBtn').addEventListener('click', () => enterStats(mathExerciseReturnScreen));
 document.getElementById('statsBackBtn').addEventListener('click', () => showScreen(statsReturnScreen));
 document.getElementById('backToMenuBtn').addEventListener('click', () => {
   clearInterval(timerInterval);
-  enterMathMenu(getCurrentUser());
+  showScreen(mathExerciseReturnScreen);
 });
 
 /* =========================================================
@@ -678,7 +852,9 @@ let graded = false;
 
 const grid = document.getElementById('grid');
 const startBtn = document.getElementById('startBtn');
+const finishNowBtn = document.getElementById('finishNowBtn');
 const newBtn = document.getElementById('newBtn');
+const timerBarItem = document.getElementById('timerBarItem');
 const timerValue = document.getElementById('timerValue');
 const scoreValue = document.getElementById('scoreValue');
 const lockedNote = document.getElementById('lockedNote');
@@ -690,6 +866,13 @@ function randInt(min, max) {
 function generateProblems(cfg) {
   if (cfg.type === 'fracAdd') return generateFracAddProblems(cfg);
   if (cfg.type === 'fracMulCross') return generateFracMulProblems(cfg);
+  if (cfg.type === 'potCalc') return generatePotCalcProblems(cfg);
+  if (cfg.type === 'potNotate') return generatePotNotateProblems(cfg);
+  if (cfg.type === 'potCompare') return generatePotCompareProblems(cfg);
+  if (cfg.type === 'termCalc') return generateTermCalcProblems(cfg);
+  if (cfg.type === 'lawId') return generateLawIdProblems(cfg);
+  if (cfg.type === 'distributive') return generateDistributiveProblems(cfg);
+  if (cfg.type === 'bigNumbers') return generateBigNumbersProblems(cfg);
   return generateNumericProblems(cfg);
 }
 
@@ -702,6 +885,7 @@ function generateNumericProblems(cfg) {
     list.push({
       taskText: `${a} + ${b} =`,
       inputType: 'number',
+      correctDisplay: String(a + b),
       checkFn: (val) => parseInt(val, 10) === a + b
     });
   }
@@ -711,6 +895,7 @@ function generateNumericProblems(cfg) {
     list.push({
       taskText: `${a} - ${b} =`,
       inputType: 'number',
+      correctDisplay: String(a - b),
       checkFn: (val) => parseInt(val, 10) === a - b
     });
   }
@@ -732,10 +917,12 @@ function generateFracAddProblems(cfg) {
     const d = randInt(2, cfg.maxDen);
     const trueNum = a * d + c * b;
     const trueDen = b * d;
+    const g = gcdInt(trueNum, trueDen);
     list.push({
       inputMode: 'fraction',
       fieldType: 'number',
       taskHTML: `${fracHTML(a, b)}<span class="op">+</span>${fracHTML(c, d)}<span class="op">=</span>`,
+      correctDisplay: `${trueNum / g}/${trueDen / g}`,
       checkFn: (numStr, denStr) => {
         const numVal = parseInt(numStr, 10);
         const denVal = parseInt(denStr, 10);
@@ -828,6 +1015,7 @@ function generateFracMulProblems(cfg) {
       inputMode: 'fraction',
       fieldType: 'text',
       taskHTML: `${fracHTML(termStr(N1), termStr(D1))}<span class="op">·</span>${fracHTML(termStr(N2), termStr(D2))}<span class="op">=</span>`,
+      correctDisplay: `${termStr(trueNum)}/${termStr(trueDen)}`,
       checkFn: (numStr, denStr) => {
         const un = parseTerm(numStr);
         const ud = parseTerm(denStr);
@@ -849,11 +1037,252 @@ function shuffle(list) {
   return list;
 }
 
+/* =========================================================
+   KAPITEL 2a: Potenzen / Regeln und Gesetze
+   ========================================================= */
+
+// nahe genug bei Fliesskomma-Vergleichen (Basis kann Dezimalzahl sein)
+function closeEnough(a, b, tol) {
+  return Math.abs(a - b) <= tol;
+}
+
+// Formatiert eine Zahl für die Anzeige der Lösung (ganze Zahlen ohne Nachkommastellen).
+function fmtNum(v) {
+  if (Number.isInteger(v)) return String(v);
+  return String(Math.round(v * 10000) / 10000);
+}
+
+function gcdInt(a, b) {
+  a = Math.abs(a); b = Math.abs(b);
+  while (b) { [a, b] = [b, a % b]; }
+  return a || 1;
+}
+
+function generatePotCalcProblems(cfg) {
+  const list = [];
+  for (let i = 0; i < cfg.count; i++) {
+    let base, exp, value;
+    if (Math.random() < 0.7) {
+      base = randInt(2, 15);
+      exp = randInt(2, 5);
+      value = Math.pow(base, exp);
+    } else {
+      base = Math.round((randInt(5, 15) / 10) * 10) / 10; // 0.5 .. 1.5
+      exp = randInt(2, 4);
+      value = Math.round(Math.pow(base, exp) * 10000) / 10000;
+    }
+    list.push({
+      taskHTML: `${base}<sup>${exp}</sup> =`,
+      correctDisplay: fmtNum(value),
+      checkFn: (val) => {
+        const num = parseFloat((val || '').replace(',', '.'));
+        if (isNaN(num)) return false;
+        return closeEnough(num, value, Math.max(0.001, Math.abs(value) * 0.0005));
+      }
+    });
+  }
+  return shuffle(list);
+}
+
+function generatePotNotateProblems(cfg) {
+  const bases = [23, 117, 15.3, 0.8, 1.2, 10.1, 9, 7, 12, 2.5];
+  const list = [];
+  for (let i = 0; i < cfg.count; i++) {
+    const base = bases[randInt(0, bases.length - 1)];
+    const exp = randInt(3, 5);
+    const factors = new Array(exp).fill(base).join(' · ');
+    list.push({
+      inputMode: 'dual',
+      fieldType: 'text',
+      labelNum: 'Basis',
+      labelDen: 'Hochzahl / Exponent',
+      taskHTML: `${factors} =`,
+      correctDisplay: `Basis ${base}, Hochzahl ${exp}`,
+      checkFn: (baseStr, expStr) => {
+        const baseVal = parseFloat((baseStr || '').replace(',', '.'));
+        const expVal = parseInt((expStr || '').trim(), 10);
+        if (isNaN(baseVal) || isNaN(expVal)) return false;
+        return closeEnough(baseVal, base, 0.0005) && expVal === exp;
+      }
+    });
+  }
+  return list;
+}
+
+function generatePotCompareProblems(cfg) {
+  const templates = [
+    () => { const a = randInt(2, 9), b = randInt(2, 4); return { left: `${a} · ${b}`, leftVal: a * b, right: `${a}<sup>${b}</sup>`, rightVal: Math.pow(a, b) }; },
+    () => { const a = randInt(2, 9), b1 = randInt(2, 4), b2 = b1 + randInt(1, 2); return { left: `${a}<sup>${b1}</sup>`, leftVal: Math.pow(a, b1), right: `${a}<sup>${b2}</sup>`, rightVal: Math.pow(a, b2) }; },
+    () => { const b = randInt(2, 4), a1 = randInt(2, 9), a2 = a1 + randInt(1, 3); return { left: `${a1}<sup>${b}</sup>`, leftVal: Math.pow(a1, b), right: `${a2}<sup>${b}</sup>`, rightVal: Math.pow(a2, b) }; },
+    () => { const a = randInt(2, 9); return { left: `${a}<sup>0</sup>`, leftVal: 1, right: `1`, rightVal: 1 }; },
+    () => { const a = randInt(5, 20), b = randInt(2, 9); return { left: `${a}<sup>${b}</sup>`, leftVal: Math.pow(a, b), right: `${a} · ${b}`, rightVal: a * b }; },
+    () => { const a = randInt(2, 6); return { left: `${a} · ${a}`, leftVal: a * a, right: `${a}<sup>2</sup>`, rightVal: a * a }; }
+  ];
+  const list = [];
+  for (let i = 0; i < cfg.count; i++) {
+    const t = templates[randInt(0, templates.length - 1)]();
+    const correct = t.leftVal < t.rightVal ? '<' : (t.leftVal > t.rightVal ? '>' : '=');
+    list.push({
+      inputMode: 'choice3',
+      options: ['<', '>', '='],
+      selected: null,
+      taskHTML: `${t.left} &nbsp;&nbsp;___&nbsp;&nbsp; ${t.right}`,
+      correctDisplay: correct,
+      checkFn: (sel) => sel === correct
+    });
+  }
+  return list;
+}
+
+function generateTermCalcProblems(cfg) {
+  const templates = [
+    () => { const a = randInt(2, 9), b = randInt(2, 9), d = randInt(2, 6), c = d * randInt(1, 6); return { text: `${a} · ${b} + ${c} : ${d} =`, val: a * b + c / d }; },
+    () => { const a = randInt(2, 9), b = randInt(2, 9), c = randInt(2, 9), d = randInt(2, 9); return { text: `${a} · ${b} - ${c} · ${d} =`, val: a * b - c * d }; },
+    () => { const a = randInt(2, 9), b = randInt(2, 9), c = randInt(1, 9), d = randInt(2, 9); return { text: `(${a} · ${b} - ${c}) · ${d} =`, val: (a * b - c) * d }; },
+    () => { const a = randInt(20, 200), b = randInt(2, 60); return { text: `${a} - ${b} =`, val: a - b }; },
+    () => { const d1 = randInt(2, 9), d2 = randInt(2, 9), q = randInt(2, 20); const total = d1 * d2 * q; return { text: `${total} : ${d1} : ${d2} =`, val: q }; },
+    () => { const a = randInt(2, 30), b = randInt(2, 30), c = randInt(2, 9); return { text: `(${a} + ${b}) : ${c} =`, val: Math.round(((a + b) / c) * 1000) / 1000 }; }
+  ];
+  const list = [];
+  for (let i = 0; i < cfg.count; i++) {
+    const t = templates[randInt(0, templates.length - 1)]();
+    list.push({
+      taskText: t.text,
+      correctDisplay: fmtNum(t.val),
+      checkFn: (val) => {
+        const num = parseFloat((val || '').replace(',', '.'));
+        if (isNaN(num)) return false;
+        return closeEnough(num, t.val, 0.01);
+      }
+    });
+  }
+  return shuffle(list);
+}
+
+function generateLawIdProblems(cfg) {
+  const templates = [
+    () => { const a = randInt(2, 90), b = randInt(2, 90); const op = Math.random() < 0.5 ? '+' : '·'; return { text: `${a} ${op} ${b} = ${b} ${op} ${a}`, law: 'K' }; },
+    () => { const a = randInt(2, 40), b = randInt(2, 40), c = randInt(2, 40); return { text: `${a} + (${b} + ${c}) = (${a} + ${b}) + ${c}`, law: 'A' }; },
+    () => { const a = randInt(2, 12), b = randInt(2, 12), c = randInt(2, 12); return { text: `${a} · (${b} · ${c}) = (${a} · ${b}) · ${c}`, law: 'A' }; },
+    () => { const a = randInt(2, 12), b = randInt(2, 20), c = randInt(2, 20); return { text: `${a} · (${b} + ${c}) = ${a} · ${b} + ${a} · ${c}`, law: 'D' }; },
+    () => { const c = randInt(2, 9), b1 = randInt(2, 9) * c, b2 = randInt(2, 9) * c; return { text: `(${b1} + ${b2}) : ${c} = ${b1} : ${c} + ${b2} : ${c}`, law: 'D' }; }
+  ];
+  const list = [];
+  const lawNames = { A: 'Assoziativgesetz', K: 'Kommutativgesetz', D: 'Distributivgesetz' };
+  for (let i = 0; i < cfg.count; i++) {
+    const t = templates[randInt(0, templates.length - 1)]();
+    list.push({
+      inputMode: 'choice3',
+      options: ['A', 'K', 'D'],
+      selected: null,
+      taskHTML: t.text,
+      correctDisplay: `${t.law} (${lawNames[t.law]})`,
+      checkFn: (sel) => sel === t.law
+    });
+  }
+  return list;
+}
+
+function generateDistributiveProblems(cfg) {
+  const list = [];
+  for (let i = 0; i < cfg.count; i++) {
+    const kind = randInt(0, 3);
+    let segments = [];
+    let values = [];
+    if (kind === 0) {
+      const a = randInt(2, 12), b = randInt(2, 20), c = randInt(2, 20);
+      segments = [
+        { text: `${a} · (${b} + ${c}) = ` }, { blank: true },
+        { text: ` · ${b} + ${a} · ` }, { blank: true },
+        { text: ` = ${a * b} + ` }, { blank: true },
+        { text: ` = ` }, { blank: true }
+      ];
+      values = [a, c, a * c, a * b + a * c];
+    } else if (kind === 1) {
+      const a = randInt(2, 12), b = randInt(2, 20), c = randInt(2, 20);
+      segments = [
+        { text: `${a} · (${b} + ${c}) = ${a} · ` }, { blank: true },
+        { text: ` + ${a} · ` }, { blank: true },
+        { text: ` = ` }, { blank: true },
+        { text: ` + ${a * c} = ` }, { blank: true }
+      ];
+      values = [b, c, a * b, a * b + a * c];
+    } else if (kind === 2) {
+      const d = randInt(2, 9);
+      const cUnits = randInt(1, 9);
+      const bUnits = cUnits + randInt(1, 9);
+      const b = d * bUnits, c = d * cUnits;
+      segments = [
+        { text: `(${b} − ${c}) : ${d} = ${b} : ` }, { blank: true },
+        { text: ` − ${c} : ` }, { blank: true },
+        { text: ` = ${b / d} − ` }, { blank: true },
+        { text: ` = ` }, { blank: true }
+      ];
+      values = [d, d, c / d, (b - c) / d];
+    } else {
+      const d = randInt(2, 9);
+      const b = d * randInt(1, 9), c = d * randInt(1, 9);
+      segments = [
+        { text: `(${b} + ${c}) : ${d} = ` }, { blank: true },
+        { text: ` : ${d} + ` }, { blank: true },
+        { text: ` : ${d} = ${b / d} + ` }, { blank: true },
+        { text: ` = ` }, { blank: true }
+      ];
+      values = [b, c, c / d, (b + c) / d];
+    }
+    list.push({
+      inputMode: 'blanks',
+      segments,
+      values,
+      correctDisplay: values.map(v => fmtNum(v)).join(' / '),
+      checkFn: (userValues) => values.every((v, vi) => {
+        const num = parseFloat((userValues[vi] || '').replace(',', '.'));
+        return !isNaN(num) && closeEnough(num, v, 0.01);
+      })
+    });
+  }
+  return list;
+}
+
+function generateBigNumbersProblems(cfg) {
+  const list = [];
+  for (let i = 0; i < cfg.count; i++) {
+    const factor = Math.round((randInt(10, 99) / 10) * 10) / 10; // 1.0 .. 9.9
+    const exp = randInt(6, 12);
+    const number = Math.round(factor * Math.pow(10, exp));
+    const displayStr = number.toLocaleString('de-CH').replace(/,/g, "'").replace(/\u2019/g, "'");
+    list.push({
+      inputMode: 'dual',
+      fieldType: 'text',
+      labelNum: 'Faktor a',
+      labelDen: 'Exponent n',
+      taskHTML: `${displayStr} = ____ · 10<sup>n</sup>`,
+      correctDisplay: `Faktor ${factor}, Exponent ${exp}`,
+      checkFn: (aStr, nStr) => {
+        const aVal = parseFloat((aStr || '').replace(',', '.'));
+        const nVal = parseInt((nStr || '').trim(), 10);
+        if (isNaN(aVal) || isNaN(nVal)) return false;
+        if (aVal < 1 || aVal >= 10) return false;
+        return closeEnough(aVal * Math.pow(10, nVal), number, Math.max(1, number * 0.0005));
+      }
+    });
+  }
+  return list;
+}
+
+function isPairMode(mode) {
+  return mode === 'fraction' || mode === 'dual';
+}
+
 function renderProblems() {
   grid.innerHTML = '';
   problems.forEach((p, idx) => {
     const cell = document.createElement('div');
-    cell.className = 'cell' + (p.inputMode === 'fraction' ? ' frac-cell' : '');
+    cell.className = 'cell'
+      + (p.inputMode === 'fraction' ? ' frac-cell' : '')
+      + (p.inputMode === 'dual' ? ' dual-cell' : '')
+      + (p.inputMode === 'choice3' ? ' choice-cell' : '')
+      + (p.inputMode === 'blanks' ? ' blanks-cell' : '');
     cell.id = 'cell-' + idx;
     if (p.inputMode === 'fraction') {
       const fieldType = p.fieldType === 'text' ? 'text' : 'number';
@@ -866,14 +1295,57 @@ function renderProblems() {
           <input type="${fieldType}" id="input-${idx}-den" disabled>
         </span>
       `;
+    } else if (p.inputMode === 'dual') {
+      const fieldType = p.fieldType === 'text' ? 'text' : 'number';
+      cell.innerHTML = `
+        <span class="nr">${idx + 1}.</span>
+        <span class="task">${p.taskHTML}</span>
+        <span class="dual-input">
+          <span class="dual-field"><label>${p.labelNum}</label><input type="${fieldType}" id="input-${idx}-num" disabled></span>
+          <span class="dual-field"><label>${p.labelDen}</label><input type="${fieldType}" id="input-${idx}-den" disabled></span>
+        </span>
+      `;
+    } else if (p.inputMode === 'choice3') {
+      const btns = p.options.map((opt, oi) => `<button type="button" class="choice-btn" id="choice-${idx}-${oi}" disabled>${opt}</button>`).join('');
+      cell.innerHTML = `
+        <span class="nr">${idx + 1}.</span>
+        <span class="task">${p.taskHTML}</span>
+        <span class="choice-buttons">${btns}</span>
+      `;
+    } else if (p.inputMode === 'blanks') {
+      let blankIdx = 0;
+      const htmlParts = p.segments.map(seg => {
+        if (seg.text !== undefined) return seg.text;
+        const bi = blankIdx++;
+        return `<input type="text" class="inline-blank" id="blank-${idx}-${bi}" disabled>`;
+      }).join('');
+      cell.innerHTML = `
+        <span class="nr">${idx + 1}.</span>
+        <span class="task">${htmlParts}</span>
+      `;
     } else {
       cell.innerHTML = `
         <span class="nr">${idx + 1}.</span>
-        <span class="task">${p.taskText}</span>
+        <span class="task">${p.taskText || p.taskHTML}</span>
         <input type="number" id="input-${idx}" disabled>
       `;
     }
     grid.appendChild(cell);
+  });
+  // Klick-Handler für choice3-Buttons erst anhängen, wenn sie im DOM sind
+  problems.forEach((p, idx) => {
+    if (p.inputMode !== 'choice3') return;
+    p.options.forEach((opt, oi) => {
+      const btn = document.getElementById('choice-' + idx + '-' + oi);
+      btn.addEventListener('click', () => {
+        if (btn.disabled) return;
+        p.selected = opt;
+        p.options.forEach((_, oj) => {
+          document.getElementById('choice-' + idx + '-' + oj).classList.remove('chosen');
+        });
+        btn.classList.add('chosen');
+      });
+    });
   });
 }
 
@@ -892,14 +1364,29 @@ function resetAll() {
   running = false;
   graded = false;
   const cfg = EXERCISES[currentExerciseKey];
+  const isTimed = cfg.timed !== false;
   problems = generateProblems(cfg);
   renderProblems();
-  timerValue.textContent = formatTime(remaining);
-  timerValue.classList.remove('warn');
+  grid.classList.toggle('single-col', !!cfg.singleColumn);
   scoreValue.textContent = '–/' + cfg.count;
   lockedNote.style.display = 'none';
-  startBtn.disabled = false;
-  startBtn.textContent = 'Start';
+
+  if (isTimed) {
+    timerBarItem.style.display = '';
+    timerValue.textContent = formatTime(remaining);
+    timerValue.classList.remove('warn');
+    startBtn.style.display = '';
+    startBtn.disabled = false;
+    startBtn.textContent = 'Start';
+    finishNowBtn.style.display = 'none';
+  } else {
+    timerBarItem.style.display = 'none';
+    startBtn.style.display = 'none';
+    finishNowBtn.style.display = '';
+    finishNowBtn.disabled = false;
+    finishNowBtn.textContent = '✓ Auswerten';
+    enableAllInputs();
+  }
 }
 newBtn.addEventListener('click', resetAll);
 
@@ -909,21 +1396,35 @@ function formatTime(sec) {
   return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
 }
 
+function enableAllInputs() {
+  problems.forEach((p, idx) => {
+    if (isPairMode(p.inputMode)) {
+      document.getElementById('input-' + idx + '-num').disabled = false;
+      document.getElementById('input-' + idx + '-den').disabled = false;
+    } else if (p.inputMode === 'choice3') {
+      p.options.forEach((_, oi) => { document.getElementById('choice-' + idx + '-' + oi).disabled = false; });
+    } else if (p.inputMode === 'blanks') {
+      p.values.forEach((_, bi) => { document.getElementById('blank-' + idx + '-' + bi).disabled = false; });
+    } else {
+      document.getElementById('input-' + idx).disabled = false;
+    }
+  });
+}
+
 function startTimer() {
   if (running) return;
   running = true;
   startBtn.disabled = true;
   startBtn.textContent = 'Läuft…';
-  problems.forEach((p, idx) => {
-    if (p.inputMode === 'fraction') {
-      document.getElementById('input-' + idx + '-num').disabled = false;
-      document.getElementById('input-' + idx + '-den').disabled = false;
-    } else {
-      document.getElementById('input-' + idx).disabled = false;
-    }
-  });
-  const firstField = problems[0].inputMode === 'fraction' ? 'input-0-num' : 'input-0';
-  document.getElementById(firstField).focus();
+  enableAllInputs();
+  const firstP = problems[0];
+  if (isPairMode(firstP.inputMode)) {
+    document.getElementById('input-0-num').focus();
+  } else if (firstP.inputMode === 'blanks') {
+    document.getElementById('blank-0-0').focus();
+  } else if (firstP.inputMode !== 'choice3') {
+    document.getElementById('input-0').focus();
+  }
 
   timerInterval = setInterval(() => {
     remaining--;
@@ -936,15 +1437,28 @@ function startTimer() {
   }, 1000);
 }
 startBtn.addEventListener('click', startTimer);
+finishNowBtn.addEventListener('click', () => {
+  clearInterval(timerInterval);
+  finishAndGrade();
+});
+
+function appendCorrectAnswer(cell, p) {
+  if (!p.correctDisplay) return;
+  const el = document.createElement('div');
+  el.className = 'correct-answer';
+  el.textContent = 'Richtig: ' + p.correctDisplay;
+  cell.appendChild(el);
+}
 
 function finishAndGrade() {
   if (graded) return;
   graded = true;
   const cfg = EXERCISES[currentExerciseKey];
+  const isTimed = cfg.timed !== false;
   let correctCount = 0;
   problems.forEach((p, idx) => {
     const cell = document.getElementById('cell-' + idx);
-    if (p.inputMode === 'fraction') {
+    if (isPairMode(p.inputMode)) {
       const numInput = document.getElementById('input-' + idx + '-num');
       const denInput = document.getElementById('input-' + idx + '-den');
       numInput.disabled = true;
@@ -953,11 +1467,50 @@ function finishAndGrade() {
       const denStr = denInput.value.trim();
       if (numStr === '' && denStr === '') {
         cell.classList.add('empty');
+        appendCorrectAnswer(cell, p);
       } else if (p.checkFn(numStr, denStr)) {
         cell.classList.add('correct');
         correctCount++;
       } else {
         cell.classList.add('wrong');
+        appendCorrectAnswer(cell, p);
+      }
+    } else if (p.inputMode === 'choice3') {
+      p.options.forEach((_, oi) => { document.getElementById('choice-' + idx + '-' + oi).disabled = true; });
+      if (p.selected == null) {
+        cell.classList.add('empty');
+        appendCorrectAnswer(cell, p);
+      } else if (p.checkFn(p.selected)) {
+        cell.classList.add('correct');
+        correctCount++;
+      } else {
+        cell.classList.add('wrong');
+        appendCorrectAnswer(cell, p);
+      }
+    } else if (p.inputMode === 'blanks') {
+      const userValues = p.values.map((_, bi) => {
+        const inp = document.getElementById('blank-' + idx + '-' + bi);
+        inp.disabled = true;
+        return inp.value.trim();
+      });
+      const allEmpty = userValues.every(v => v === '');
+      const allCorrect = p.checkFn(userValues);
+      userValues.forEach((val, bi) => {
+        const inp = document.getElementById('blank-' + idx + '-' + bi);
+        if (val === '') return;
+        const num = parseFloat(val.replace(',', '.'));
+        const ok = !isNaN(num) && closeEnough(num, p.values[bi], 0.01);
+        inp.classList.add(ok ? 'blank-correct' : 'blank-wrong');
+      });
+      if (allEmpty) {
+        cell.classList.add('empty');
+        appendCorrectAnswer(cell, p);
+      } else if (allCorrect) {
+        cell.classList.add('correct');
+        correctCount++;
+      } else {
+        cell.classList.add('wrong');
+        appendCorrectAnswer(cell, p);
       }
     } else {
       const input = document.getElementById('input-' + idx);
@@ -965,19 +1518,25 @@ function finishAndGrade() {
       const val = input.value.trim();
       if (val === '') {
         cell.classList.add('empty');
+        appendCorrectAnswer(cell, p);
       } else if (p.checkFn(val)) {
         cell.classList.add('correct');
         correctCount++;
       } else {
         cell.classList.add('wrong');
+        appendCorrectAnswer(cell, p);
       }
     }
   });
   scoreValue.textContent = correctCount + '/' + cfg.count;
   lockedNote.style.display = 'block';
-  startBtn.textContent = 'Fertig';
-  timerValue.textContent = '00:00';
-
+  if (!isTimed) {
+    finishNowBtn.disabled = true;
+    finishNowBtn.textContent = 'Ausgewertet';
+  } else {
+    startBtn.textContent = 'Fertig';
+    timerValue.textContent = '00:00';
+  }
 
   saveResult(currentExerciseKey, correctCount, cfg.count);
 }
@@ -1167,7 +1726,7 @@ function enterMainMenu(name) {
   showScreen('screen-mainmenu');
 }
 document.getElementById('mainLogoutBtn').addEventListener('click', logout);
-document.getElementById('goMathBtn').addEventListener('click', () => enterMathMenu(getCurrentUser()));
+document.getElementById('goMathBtn').addEventListener('click', () => enterMathTopMenu());
 document.getElementById('goEnglishBtn').addEventListener('click', () => enterEnglishClasses());
 document.getElementById('goStatsBtn').addEventListener('click', () => enterStats('screen-mainmenu'));
 
