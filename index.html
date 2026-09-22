@@ -287,6 +287,17 @@
   .correct-answer { flex-basis: 100%; color: #dc3545; font-size: 12px; font-weight: 600; margin-top: 2px; }
   .cell.blanks-cell .correct-answer { margin-top: 6px; }
   .cell.dual-cell .correct-answer { flex-basis: auto; }
+
+  /* --- Quadratzahlen-Drill (eine Frage nach der anderen) --- */
+  .quadrat-box { background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 30px; max-width: 420px; margin: 0 auto; text-align: center; }
+  .quadrat-score { font-size: 13px; color: #888; margin-bottom: 16px; }
+  .quadrat-question { font-size: 36px; font-weight: bold; margin-bottom: 22px; }
+  .quadrat-question sup { font-size: 0.6em; }
+  .quadrat-input { width: 150px; padding: 10px; font-size: 22px; text-align: center; border: 1px solid #ccc; border-radius: 8px; }
+  .quadrat-input:disabled { background: #f0f0f0; }
+  .quadrat-feedback { min-height: 24px; font-size: 15px; font-weight: bold; margin-top: 16px; }
+  .quadrat-feedback.ok { color: #28a745; }
+  .quadrat-feedback.bad { color: #dc3545; }
 </style>
 </head>
 <body>
@@ -351,6 +362,56 @@
       <div class="menu-card" id="goKlasse7Btn">
         <div class="t">📘 7. Klasse</div>
         <div class="s">Übungen passend zum Schulbuch</div>
+      </div>
+      <div class="menu-card" id="goKlasse8Btn">
+        <div class="t">📗 8. Klasse</div>
+        <div class="s">Übungen passend zum Schulbuch</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MATHE: 8. KLASSE – KAPITEL WÄHLEN -->
+  <div class="screen" id="screen-math-klasse8">
+    <div class="topbar">
+      <h1>8. Klasse</h1>
+      <button class="btn-secondary" id="klasse8BackBtn">← Zurück</button>
+    </div>
+    <h2>Kapitel wählen</h2>
+    <div class="menu-grid">
+      <div class="menu-card" id="goKapitel1cBtn">
+        <div class="t">Kapitel 1c</div>
+        <div class="s">Gleichungen, Folgen, Wurzeln</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MATHE: KAPITEL 1c – ÜBUNGEN -->
+  <div class="screen" id="screen-math-1c-menu">
+    <div class="topbar">
+      <h1>Kapitel 1c – Gleichungen, Folgen, Wurzeln</h1>
+      <button class="btn-secondary" id="kapitel1cBackBtn">← Zurück</button>
+    </div>
+    <div class="menu-grid">
+      <div class="menu-card" id="goQuadratBtn">
+        <div class="t">Quadratzahlen 1–25</div>
+        <div class="s">Quadrieren und Wurzel ziehen, eine Aufgabe nach der anderen</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MATHE: QUADRATZAHLEN-DRILL -->
+  <div class="screen" id="screen-math-quadrat">
+    <div class="topbar">
+      <h1>Quadratzahlen 1–25</h1>
+      <button class="btn-secondary" id="quadratBackBtn">← Zurück</button>
+    </div>
+    <div class="quadrat-box">
+      <div class="quadrat-score">Richtig: <span id="quadratScoreText">0 / 0</span></div>
+      <div class="quadrat-question" id="quadratQuestion"></div>
+      <input type="text" id="quadratInput" class="quadrat-input" autocomplete="off" inputmode="numeric">
+      <div class="quadrat-feedback" id="quadratFeedback"></div>
+      <div style="margin-top:18px;">
+        <button class="btn-primary" id="quadratActionBtn">Prüfen</button>
       </div>
     </div>
   </div>
@@ -700,16 +761,9 @@ const EXERCISES = {
     sub: "10 Aufgaben · Zahl in der Form a · 10ⁿ schreiben",
     count: 10,
     timed: false
-  },
-  ueberschlag: {
-    type: 'estimate',
-    title: "Überschlagsrechnungen (Sachaufgaben)",
-    sub: "8 Aufgaben · Alltagssituationen schätzen · zählt als richtig innerhalb eines Toleranzbereichs",
-    count: 8,
-    timed: false
   }
 };
-const KOPFRECHNEN_KEYS = ['k10000', 'k20000', 'k100000', 'k2000', 'k600', 'fracAdd', 'fracMulCross', 'ueberschlag'];
+const KOPFRECHNEN_KEYS = ['k10000', 'k20000', 'k100000', 'k2000', 'k600', 'fracAdd', 'fracMulCross'];
 const KAPITEL_2A_KEYS = ['z2a_potcalc', 'z2a_potnotate', 'z2a_potcompare', 'z2a_termcalc', 'z2a_lawid', 'z2a_distributive', 'z2a_bignum'];
 const DURATION_SECONDS = 10 * 60;
 
@@ -839,6 +893,84 @@ document.getElementById('goKapitel2aBtn').addEventListener('click', () => enterM
 document.getElementById('kapitel2aBackBtn').addEventListener('click', () => enterMathKlasse7());
 document.getElementById('kapitel2aStatsBtn').addEventListener('click', () => enterStats('screen-math-2a-menu'));
 
+document.getElementById('goKlasse8Btn').addEventListener('click', () => showScreen('screen-math-klasse8'));
+document.getElementById('klasse8BackBtn').addEventListener('click', () => enterMathTopMenu());
+document.getElementById('goKapitel1cBtn').addEventListener('click', () => showScreen('screen-math-1c-menu'));
+document.getElementById('kapitel1cBackBtn').addEventListener('click', () => showScreen('screen-math-klasse8'));
+
+/* =========================================================
+   KAPITEL 1c: Quadratzahlen 1–25 (Frage-für-Frage-Drill)
+   ========================================================= */
+let quadratScoreCorrect = 0;
+let quadratScoreTotal = 0;
+let quadratCorrectAnswer = null;
+let quadratChecked = false;
+
+function startQuadratDrill() {
+  quadratScoreCorrect = 0;
+  quadratScoreTotal = 0;
+  document.getElementById('quadratScoreText').textContent = '0 / 0';
+  pickNewQuadratQuestion();
+  showScreen('screen-math-quadrat');
+}
+
+function pickNewQuadratQuestion() {
+  const n = randInt(1, 25);
+  const direction = Math.random() < 0.5 ? 'square' : 'root';
+  const input = document.getElementById('quadratInput');
+  const feedback = document.getElementById('quadratFeedback');
+  const actionBtn = document.getElementById('quadratActionBtn');
+  feedback.textContent = '';
+  feedback.className = 'quadrat-feedback';
+  input.value = '';
+  input.disabled = false;
+  actionBtn.textContent = 'Prüfen';
+  quadratChecked = false;
+  if (direction === 'square') {
+    document.getElementById('quadratQuestion').innerHTML = `${n}<sup>2</sup> = ?`;
+    quadratCorrectAnswer = n * n;
+  } else {
+    const value = n * n;
+    document.getElementById('quadratQuestion').innerHTML = `&radic;${value} = ?`;
+    quadratCorrectAnswer = n;
+  }
+  input.focus();
+}
+
+function checkQuadratAnswer() {
+  const input = document.getElementById('quadratInput');
+  const feedback = document.getElementById('quadratFeedback');
+  const val = parseInt(input.value.trim(), 10);
+  quadratScoreTotal++;
+  input.disabled = true;
+  if (val === quadratCorrectAnswer) {
+    quadratScoreCorrect++;
+    feedback.textContent = '✅ Richtig!';
+    feedback.className = 'quadrat-feedback ok';
+  } else {
+    feedback.textContent = '❌ Falsch. Richtig wäre: ' + quadratCorrectAnswer;
+    feedback.className = 'quadrat-feedback bad';
+  }
+  document.getElementById('quadratScoreText').textContent = quadratScoreCorrect + ' / ' + quadratScoreTotal;
+  document.getElementById('quadratActionBtn').textContent = 'Weiter →';
+  quadratChecked = true;
+}
+
+document.getElementById('quadratActionBtn').addEventListener('click', () => {
+  if (quadratChecked) {
+    pickNewQuadratQuestion();
+  } else {
+    checkQuadratAnswer();
+  }
+});
+document.getElementById('quadratInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    document.getElementById('quadratActionBtn').click();
+  }
+});
+document.getElementById('goQuadratBtn').addEventListener('click', () => startQuadratDrill());
+document.getElementById('quadratBackBtn').addEventListener('click', () => showScreen('screen-math-1c-menu'));
+
 document.getElementById('statsBtn').addEventListener('click', () => enterStats('screen-menu'));
 document.getElementById('toStatsBtn').addEventListener('click', () => enterStats(mathExerciseReturnScreen));
 document.getElementById('statsBackBtn').addEventListener('click', () => showScreen(statsReturnScreen));
@@ -880,133 +1012,7 @@ function generateProblems(cfg) {
   if (cfg.type === 'lawId') return generateLawIdProblems(cfg);
   if (cfg.type === 'distributive') return generateDistributiveProblems(cfg);
   if (cfg.type === 'bigNumbers') return generateBigNumbersProblems(cfg);
-  if (cfg.type === 'estimate') return generateEstimateProblems(cfg);
   return generateNumericProblems(cfg);
-}
-
-/* =========================================================
-   ÜBERSCHLAGSRECHNUNGEN (Sachsituationen)
-   ========================================================= */
-function fmtSchweiz(n) {
-  return (Math.round(n * 100) / 100).toLocaleString('de-CH', { maximumFractionDigits: 2 });
-}
-function roundToNearest(n, nearest) { return Math.round(n / nearest) * nearest; }
-
-const ESTIMATE_FOOD_ITEMS = [
-  ['Brot', 3.20, 5.80], ['Milch', 1.30, 1.90], ['Käse', 3.50, 8.90],
-  ['Äpfel', 2.20, 4.50], ['Joghurt', 1.80, 3.40], ['Butter', 2.50, 3.80],
-  ['Teigwaren', 1.90, 3.60], ['Schokolade', 1.50, 4.20], ['Orangensaft', 2.80, 4.90]
-];
-const ESTIMATE_DRINKS = [['Getränke', 2.50, 4.50], ['Sirupflaschen', 3.80, 6.90], ['Kuchenstücke', 1.50, 3.20]];
-const ESTIMATE_PURCHASES = ['ein Velo-Ersatzteil', 'ein Buch', 'ein Kinoticket', 'Fussballkarten', 'ein Geschenk', 'einen Ausflug'];
-
-const ESTIMATE_TEMPLATES = [
-  // Einkauf – Addition
-  function () {
-    const n = randInt(3, 4);
-    const shuffled = [...ESTIMATE_FOOD_ITEMS].sort(() => Math.random() - 0.5).slice(0, n);
-    const prices = shuffled.map(it => Math.round((it[1] + Math.random() * (it[2] - it[1])) * 20) / 20);
-    const names = shuffled.map((it, i) => `${it[0]} (Fr. ${fmtSchweiz(prices[i])})`);
-    const listText = names.slice(0, -1).join(', ') + ' und ' + names[names.length - 1];
-    const exact = prices.reduce((a, b) => a + b, 0);
-    const ideal = prices.reduce((a, b) => a + Math.round(b), 0);
-    const steps = shuffled.map((it, i) => `${it[0]}: ${fmtSchweiz(prices[i])} → ${Math.round(prices[i])}`).join(' · ');
-    return {
-      taskText: `Du kaufst im Dorfladen ${listText} ein. Schätze mit ganzen Franken: Wie viel bezahlst du ungefähr?`,
-      ideal, exact, steps
-    };
-  },
-  // Reihen x Plätze – Multiplikation
-  function () {
-    const a = randInt(28, 92), b = randInt(14, 46);
-    const exact = a * b;
-    const ra = roundToNearest(a, 10), rb = roundToNearest(b, 10);
-    const ideal = ra * rb;
-    return {
-      taskText: `Die Mehrzweckhalle in eurem Dorf hat ${a} Reihen mit je ${b} Plätzen. Schätze, wie viele Plätze die Halle total hat.`,
-      ideal, exact, steps: `${a} → ${ra}, ${b} → ${rb}. ${ra} · ${rb} = ${ideal} Plätze.`
-    };
-  },
-  // Aufteilen – Division
-  function () {
-    const people = randInt(3, 9);
-    const total = randInt(15, 98) * 10 + (Math.random() < 0.5 ? 0 : 5);
-    const exact = total / people;
-    const rTotal = roundToNearest(total, 50);
-    const ideal = rTotal / people;
-    return {
-      taskText: `Ein Schulausflug kostet total Fr. ${fmtSchweiz(total)} und wird auf ${people} Kinder aufgeteilt. Schätze, wie viel jedes Kind ungefähr bezahlt.`,
-      ideal, exact, steps: `${fmtSchweiz(total)} → ${rTotal}. ${rTotal} : ${people} ≈ ${fmtSchweiz(ideal)} Fr.`
-    };
-  },
-  // Geschwindigkeit – Division
-  function () {
-    const distance = randInt(95, 385), time = randInt(2, 6);
-    const exact = distance / time;
-    const rDist = roundToNearest(distance, 10);
-    const ideal = rDist / time;
-    return {
-      taskText: `Ein Postauto fährt ${distance} km in etwa ${time} Stunden durchs Tal. Schätze die Durchschnittsgeschwindigkeit.`,
-      ideal, exact, steps: `${distance} → ${rDist}. ${rDist} : ${time} ≈ ${fmtSchweiz(ideal)} km/h.`
-    };
-  },
-  // Taschengeld – Subtraktion
-  function () {
-    const budget = randInt(6, 28) * 10;
-    const spent1 = Math.round((8 + Math.random() * (budget * 0.35 - 8)) * 2) / 2;
-    const spent2 = Math.round((6 + Math.random() * (budget * 0.3 - 6)) * 2) / 2;
-    const item = ESTIMATE_PURCHASES[randInt(0, ESTIMATE_PURCHASES.length - 1)];
-    const exact = budget - spent1 - spent2;
-    const ideal = budget - Math.round(spent1) - Math.round(spent2);
-    return {
-      taskText: `Du hast Fr. ${fmtSchweiz(budget)} Taschengeld gespart. Du gibst Fr. ${fmtSchweiz(spent1)} für ${item} und Fr. ${fmtSchweiz(spent2)} für ein Zvieri aus. Schätze, wie viel dir ungefähr bleibt.`,
-      ideal, exact, steps: `${fmtSchweiz(spent1)} → ${Math.round(spent1)}, ${fmtSchweiz(spent2)} → ${Math.round(spent2)}. ${budget} − ${Math.round(spent1)} − ${Math.round(spent2)} = ${ideal} Fr.`
-    };
-  },
-  // Menge x Preis – Multiplikation mit Franken
-  function () {
-    const qty = randInt(12, 48);
-    const price = Math.round((2.2 + Math.random() * (12.9 - 2.2)) * 10) / 10;
-    const drink = ESTIMATE_DRINKS[randInt(0, ESTIMATE_DRINKS.length - 1)];
-    const exact = qty * price;
-    const rQty = roundToNearest(qty, 10), rPrice = Math.round(price);
-    const ideal = rQty * rPrice;
-    return {
-      taskText: `Für das Schulfest werden ${qty} ${drink[0]} zu je Fr. ${fmtSchweiz(price)} gekauft. Schätze die Gesamtkosten.`,
-      ideal, exact, steps: `${qty} → ${rQty}, ${fmtSchweiz(price)} → ${rPrice}. ${rQty} · ${rPrice} = ${ideal} Fr.`
-    };
-  },
-  // Wanderzeit
-  function () {
-    const distance = Math.round((4.2 + Math.random() * (18.6 - 4.2)) * 10) / 10;
-    const speed = randInt(3, 5);
-    const exact = distance / speed;
-    const rDist = Math.round(distance);
-    const ideal = rDist / speed;
-    return {
-      taskText: `Eine Wanderung ab der Schule ist ${fmtSchweiz(distance)} km lang. Bei einem Tempo von ${speed} km/h: Schätze die Wanderzeit in Stunden.`,
-      ideal, exact, steps: `${fmtSchweiz(distance)} → ${rDist}. ${rDist} : ${speed} ≈ ${fmtSchweiz(ideal)} h.`
-    };
-  }
-];
-
-function generateEstimateProblems(cfg) {
-  const list = [];
-  for (let i = 0; i < cfg.count; i++) {
-    const tpl = ESTIMATE_TEMPLATES[randInt(0, ESTIMATE_TEMPLATES.length - 1)];
-    const p = tpl();
-    const tolGood = Math.max(p.ideal * 0.15, p.exact * 0.1, 1);
-    list.push({
-      taskText: p.taskText,
-      inputType: 'number',
-      correctDisplay: `≈ ${fmtSchweiz(p.ideal)} (exakt: ${fmtSchweiz(p.exact)}) — ${p.steps}`,
-      checkFn: (val) => {
-        const num = parseFloat(val);
-        return !isNaN(num) && Math.abs(num - p.ideal) <= tolGood;
-      }
-    });
-  }
-  return list;
 }
 
 function generateNumericProblems(cfg) {
